@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "exodus-laundry"
+  },
+  "targets": {
+    "exodus-laundry": {
+      "hosting": {
+        "dashboard": ["exodus-laundry"]
+      }
+    }
+  }
+}

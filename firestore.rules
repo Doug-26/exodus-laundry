@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phase 9: replace with production security rules.
+    // All access denied by default until rules are written.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

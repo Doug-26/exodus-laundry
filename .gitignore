@@ -1,0 +1,48 @@
+# ── Secrets — never commit ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# Generated Firebase environment files (created from .env by scripts/generate-env.mjs).
+# The committed *.example.ts templates are the reference; the real ones stay local.
+apps/*/src/environments/environment.ts
+apps/*/src/environments/environment.prod.ts
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build outputs ────────────────────────────────────────────────────────────
+dist/
+www/
+functions/lib/
+.angular/
+coverage/
+
+# ── Firebase ─────────────────────────────────────────────────────────────────
+.firebase/
+*-debug.log
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
+
+# ── Capacitor native projects (regenerated with `npx cap add`) ───────────────
+/apps/mobile/android/
+/apps/mobile/ios/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

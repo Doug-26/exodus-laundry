@@ -1,0 +1,19 @@
+{
+  "name": "exodus-laundry",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "config": "node scripts/generate-env.mjs",
+    "test:shared": "jest --config libs/shared/jest.config.js"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "typescript": "~5.8.0"
+  }
+}
