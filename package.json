@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "config": "node scripts/generate-env.mjs",
+    "seed:admin": "node scripts/seed-admin.mjs",
     "test:shared": "jest --config libs/shared/jest.config.js"
   },
   "devDependencies": {

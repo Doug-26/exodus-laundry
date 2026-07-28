@@ -10,10 +10,14 @@ module.exports = {
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
+        // Restrict to jest types only; @types/jasmine is hoisted from the mobile
+        // app and would otherwise shadow jest's .resolves/.rejects/.toHaveLength.
+        types: ['jest', 'node'],
       },
     }],
   },
   moduleNameMapper: {
+    '^firebase/firestore$': '<rootDir>/__mocks__/firebase-firestore.ts',
     '^firebase/(.*)$': '<rootDir>/__mocks__/firebase.ts',
   },
 };
