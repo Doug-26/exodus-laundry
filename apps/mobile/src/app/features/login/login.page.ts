@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   IonButton,
@@ -40,7 +41,7 @@ import { homeRouteForRole } from '../../auth/role-routes';
     </ion-header>
 
     <ion-content class="ion-padding">
-      @if (denied) {
+      @if (denied()) {
         <ion-text color="danger">
           <p role="alert">This account can’t use the app. Contact the shop.</p>
         </ion-text>
@@ -92,6 +93,7 @@ export class LoginPage {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly form = this.fb.group({
     email: this.fb.control('', [Validators.required, Validators.email]),
@@ -100,7 +102,17 @@ export class LoginPage {
 
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
-  protected readonly denied = new URLSearchParams(window.location.search).has('denied');
+  protected readonly denied = signal(false);
+
+  constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      if (params.has('denied')) {
+        this.denied.set(true);
+        // Strip the param so a refresh (or the next user) doesn't keep the notice.
+        void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      }
+    });
+  }
 
   protected invalid(name: 'email' | 'password'): boolean {
     const c = this.form.controls[name];

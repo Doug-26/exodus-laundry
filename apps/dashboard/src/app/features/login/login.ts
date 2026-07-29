@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormField, email as emailRule, form, required } from '@angular/forms/signals';
 import { AuthService } from '../../auth/auth.service';
@@ -15,7 +16,7 @@ interface LoginModel {
     <main class="login">
       <h1>Exodus Laundry — Staff</h1>
 
-      @if (denied) {
+      @if (denied()) {
         <p class="banner banner--error" role="alert">
           This account can’t access the dashboard. Contact your administrator.
         </p>
@@ -94,7 +95,17 @@ export class LoginComponent {
   protected readonly busy = signal(false);
   protected readonly resetSent = signal(false);
   protected readonly submitted = signal(false);
-  protected readonly denied = this.route.snapshot.queryParamMap.has('denied');
+  protected readonly denied = signal(false);
+
+  constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      if (params.has('denied')) {
+        this.denied.set(true);
+        // Strip the param so a refresh (or the next user) doesn't keep the notice.
+        void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      }
+    });
+  }
 
   protected showError(touched: boolean, invalid: boolean): boolean {
     return (touched || this.submitted()) && invalid;
