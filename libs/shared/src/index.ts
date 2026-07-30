@@ -3,6 +3,7 @@ export type { Timestamp } from './models/timestamp.model';
 export type { User, UserRole } from './models/user.model';
 export type {
   Order,
+  OrderWithId,
   OrderStatus,
   Fulfilment,
   OrderSource,
@@ -10,6 +11,7 @@ export type {
   Destination,
   ShopLocation,
   RouteCache,
+  StatusHistoryEntry,
 } from './models/order.model';
 export type { Rate, RateUnit } from './models/rate.model';
 export type { RiderLocation } from './models/rider-location.model';
@@ -37,3 +39,21 @@ export {
   PhoneTakenError,
 } from './services/users';
 export type { CreateUserProfileInput } from './services/users';
+export {
+  SERVICES,
+  serviceLabel,
+  statusLabel,
+  dailyKey,
+  formatClaimNumber,
+  activeFor,
+  nextStatus,
+  InvalidTransitionError,
+  createOrder,
+  updateOrderStatus,
+  setFulfilment,
+  cancelOrder,
+  subscribeActiveOrders,
+  getOrder,
+  subscribeOrder,
+} from './services/orders';
+export type { ServiceOption, CreateOrderInput } from './services/orders';

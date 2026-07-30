@@ -39,6 +39,12 @@ export interface RouteCache {
   computedAt: Timestamp;
 }
 
+export interface StatusHistoryEntry {
+  status: OrderStatus;
+  /** Client clock (serverTimestamp is not allowed inside array elements). */
+  at: Timestamp;
+}
+
 export interface Order {
   /** null = guest/walk-in with no app account */
   customerId: string | null;
@@ -55,11 +61,21 @@ export interface Order {
   weightKg: number | null;
   /** ₱ owed; manual entry at MVP, rate-derived in phase 2 */
   price: number | null;
+  /** Special instructions captured at intake (separate whites, delicates, …). */
+  notes: string;
   /** Set by customer on their own device — never at the counter */
   destination: Destination | null;
   shopLocation: ShopLocation;
   assignedRiderId: string | null;
   routeCache: RouteCache | null;
+  /** true while the order is on the active queue; false once completed/cancelled. */
+  active: boolean;
+  statusHistory: StatusHistoryEntry[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** An Order plus its Firestore document id (Order itself is stored without an id). */
+export interface OrderWithId extends Order {
+  id: string;
 }

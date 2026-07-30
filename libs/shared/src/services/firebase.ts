@@ -1,5 +1,10 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from 'firebase/firestore';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getDatabase, type Database } from 'firebase/database';
 
@@ -37,7 +42,10 @@ export function initializeFirebase(config: FirebaseConfig): FirebaseServices {
   const app = initializeApp(config);
   services = {
     app,
-    firestore: getFirestore(app),
+    // Offline persistence + multi-tab. Must be the ONLY Firestore init in the app.
+    firestore: initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    }),
     auth: getAuth(app),
     database: getDatabase(app),
   };

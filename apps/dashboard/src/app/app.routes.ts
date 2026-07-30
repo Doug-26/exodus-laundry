@@ -10,7 +10,18 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard, staffAdminGuard],
-    loadComponent: () => import('./features/home/home').then((m) => m.HomeComponent),
+    loadComponent: () => import('./features/queue/queue').then((m) => m.QueueComponent),
+  },
+  {
+    // Must be declared before 'orders/:id' (first-match router).
+    path: 'orders/new',
+    canActivate: [authGuard, staffAdminGuard],
+    loadComponent: () => import('./features/new-order/new-order').then((m) => m.NewOrderComponent),
+  },
+  {
+    path: 'orders/:id',
+    canActivate: [authGuard, staffAdminGuard],
+    loadComponent: () => import('./features/order-detail/order-detail').then((m) => m.OrderDetailComponent),
   },
   {
     path: 'team',
