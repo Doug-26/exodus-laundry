@@ -83,4 +83,24 @@ export async function findUserByPhone(
   return snap.exists() ? { uid: (snap.data() as { uid: string }).uid } : null;
 }
 
+/**
+ * Look up a CUSTOMER account by phone (any PH format), returning name only
+ * (never address — §10 privacy). Returns null for no match, an invalid number,
+ * or a phone that belongs to a non-customer (staff/rider/admin) account.
+ */
+export async function lookupCustomerByPhone(
+  firestore: Firestore,
+  phoneRaw: string,
+): Promise<{ uid: string; name: string } | null> {
+  const match = await findUserByPhone(firestore, phoneRaw);
+  if (!match) {
+    return null;
+  }
+  const profile = await getUserProfile(firestore, match.uid);
+  if (!profile || profile.role !== 'customer') {
+    return null;
+  }
+  return { uid: match.uid, name: profile.name };
+}
+
 export type { UserRole };

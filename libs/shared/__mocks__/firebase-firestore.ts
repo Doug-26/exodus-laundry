@@ -27,6 +27,11 @@ interface WriteCall {
   merge?: boolean;
 }
 
+interface OrderDocSeed {
+  id: string;
+  data: Record<string, unknown>;
+}
+
 interface MockState {
   // users.spec.ts
   phoneExists: boolean;
@@ -35,6 +40,9 @@ interface MockState {
   // orders.spec.ts
   counterExists: boolean;
   counterSeq: number;
+  // getDocs seed (orders query) + batch capture
+  orderDocs: OrderDocSeed[];
+  batchUpdates: WriteCall[];
   // shared
   setCalls: WriteCall[];
   updateCalls: WriteCall[];
@@ -46,6 +54,8 @@ export const __mockState: MockState = {
   userDocData: undefined,
   counterExists: false,
   counterSeq: 0,
+  orderDocs: [],
+  batchUpdates: [],
   setCalls: [],
   updateCalls: [],
 };
@@ -56,6 +66,8 @@ export function __resetMockState(): void {
   __mockState.userDocData = undefined;
   __mockState.counterExists = false;
   __mockState.counterSeq = 0;
+  __mockState.orderDocs = [];
+  __mockState.batchUpdates = [];
   __mockState.setCalls = [];
   __mockState.updateCalls = [];
 }
@@ -132,4 +144,28 @@ export function where(field: string, op: string, value: unknown): Record<string,
 
 export function onSnapshot(): () => void {
   return () => undefined;
+}
+
+// getDocs ignores the query and returns the seeded orderDocs (so the where()
+// phone filter is NOT exercised here — that is covered by live E2E only).
+export function getDocs(_q: unknown): Promise<{ docs: unknown[] }> {
+  return Promise.resolve({
+    docs: __mockState.orderDocs.map((o) => ({
+      id: o.id,
+      data: () => o.data,
+      ref: { collection: 'orders', id: o.id },
+    })),
+  });
+}
+
+export function writeBatch(_db: unknown) {
+  return {
+    set: (ref: Ref, data: Record<string, unknown>) => {
+      __mockState.batchUpdates.push({ collection: ref.collection, id: ref.id, data });
+    },
+    update: (ref: Ref, data: Record<string, unknown>) => {
+      __mockState.batchUpdates.push({ collection: ref.collection, id: ref.id, data });
+    },
+    commit: () => Promise.resolve(),
+  };
 }

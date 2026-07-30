@@ -5,6 +5,7 @@ import {
   dailyKey,
   formatClaimNumber,
   InvalidTransitionError,
+  linkGuestOrdersToCustomer,
   nextStatus,
   serviceLabel,
   setFulfilment,
@@ -127,6 +128,47 @@ describe('createOrder', () => {
   it('rejects an invalid phone before writing anything', async () => {
     await expect(createOrder(db, { ...validInput, guestPhoneRaw: 'notaphone' })).rejects.toThrow();
     expect(__mockState.setCalls).toHaveLength(0);
+  });
+
+  it('writes a linked order when customerId is provided (guestContact still set)', async () => {
+    await createOrder(db, { ...validInput, customerId: 'cust1' });
+    const orderSet = __mockState.setCalls.find((c) => c.collection === 'orders');
+    expect(orderSet?.data['customerId']).toBe('cust1');
+    expect((orderSet?.data['guestContact'] as { name: string }).name).toBe('Ana');
+  });
+});
+
+describe('linkGuestOrdersToCustomer', () => {
+  // NOTE: the mock getDocs ignores the where('guestContact.phone') filter —
+  // the server-side phone match is covered by live E2E, not this unit test.
+  beforeEach(() => __resetMockState());
+
+  it('links only the guest orders (customerId === null)', async () => {
+    __mockState.orderDocs = [
+      { id: 'o1', data: { customerId: null } },
+      { id: 'o2', data: { customerId: 'someoneElse' } },
+      { id: 'o3', data: { customerId: null } },
+    ];
+
+    const count = await linkGuestOrdersToCustomer(db, '0917 123 4567', 'cust1');
+
+    expect(count).toBe(2);
+    const linkedIds = __mockState.batchUpdates.map((b) => b.id).sort();
+    expect(linkedIds).toEqual(['o1', 'o3']);
+    for (const b of __mockState.batchUpdates) {
+      expect(b.data['customerId']).toBe('cust1');
+      expect(b.data['updatedAt']).toBeDefined();
+    }
+  });
+
+  it('returns 0 and writes nothing when there are no guest matches', async () => {
+    __mockState.orderDocs = [{ id: 'o1', data: { customerId: 'already' } }];
+    await expect(linkGuestOrdersToCustomer(db, '+639171234567', 'cust1')).resolves.toBe(0);
+    expect(__mockState.batchUpdates).toHaveLength(0);
+  });
+
+  it('returns 0 for an invalid phone', async () => {
+    await expect(linkGuestOrdersToCustomer(db, 'notaphone', 'cust1')).resolves.toBe(0);
   });
 });
 

@@ -46,9 +46,9 @@ export interface StatusHistoryEntry {
 }
 
 export interface Order {
-  /** null = guest/walk-in with no app account */
+  /** null = guest/walk-in with no app account; set once linked to an app account */
   customerId: string | null;
-  /** populated only when customerId is null */
+  /** Contact snapshot captured at intake; always set for source:'walk_in' (guest or linked). May be null for in-app orders (Phase 4). */
   guestContact: GuestContact | null;
   /** userId of staff (walk-in) or customer (in-app) */
   createdBy: string;

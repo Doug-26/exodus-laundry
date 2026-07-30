@@ -1,4 +1,10 @@
-import { createUserProfile, findUserByPhone, getUserProfile, PhoneTakenError } from './users';
+import {
+  createUserProfile,
+  findUserByPhone,
+  getUserProfile,
+  lookupCustomerByPhone,
+  PhoneTakenError,
+} from './users';
 import { __mockState, __resetMockState } from '../../__mocks__/firebase-firestore';
 
 // The Firestore instance is never used by the mock; cast a stub to the param type.
@@ -79,5 +85,32 @@ describe('getUserProfile', () => {
 
   it('returns null when the doc is absent', async () => {
     await expect(getUserProfile(db, 'uid1')).resolves.toBeNull();
+  });
+});
+
+describe('lookupCustomerByPhone', () => {
+  beforeEach(() => __resetMockState());
+
+  it('returns {uid,name} for a registered customer', async () => {
+    __mockState.phoneExists = true;
+    __mockState.phoneDocData = { uid: 'cust1' };
+    __mockState.userDocData = { role: 'customer', name: 'Ana', phone: '+639171234567', fcmTokens: [] };
+
+    await expect(lookupCustomerByPhone(db, '0917 123 4567')).resolves.toEqual({
+      uid: 'cust1',
+      name: 'Ana',
+    });
+  });
+
+  it('returns null when the phone belongs to a non-customer (e.g. staff)', async () => {
+    __mockState.phoneExists = true;
+    __mockState.phoneDocData = { uid: 'staff1' };
+    __mockState.userDocData = { role: 'staff', name: 'Boss', phone: '+639171234567', fcmTokens: [] };
+
+    await expect(lookupCustomerByPhone(db, '+639171234567')).resolves.toBeNull();
+  });
+
+  it('returns null for an unregistered phone', async () => {
+    await expect(lookupCustomerByPhone(db, '+639170000000')).resolves.toBeNull();
   });
 });

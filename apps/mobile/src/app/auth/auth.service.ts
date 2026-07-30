@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   createUserProfile,
   getUserProfile,
+  linkGuestOrdersToCustomer,
   onAuthChange,
   signInWithEmail,
   signOutUser,
@@ -86,6 +87,12 @@ export class AuthService {
     }
     // onAuthChange fired before the profile existed; refresh it now.
     this._profile.set(await getUserProfile(this.fb.firestore, cred.user.uid));
+
+    // Best-effort: attach any prior guest orders placed under this phone.
+    // Never block or fail signup on this.
+    void linkGuestOrdersToCustomer(this.fb.firestore, input.phoneRaw, cred.user.uid).catch(
+      () => undefined,
+    );
   }
 
   logout() {

@@ -81,6 +81,9 @@ const STATUS_OPTIONS: OrderStatus[] = [
               <td><a [routerLink]="['/orders', o.id]">{{ o.claimNumber }}</a></td>
               <td>
                 {{ o.guestContact?.name }}
+                @if (o.customerId !== null) {
+                  <span class="badge">Linked</span>
+                }
                 <span class="phone">{{ o.guestContact?.phone }}</span>
               </td>
               <td>{{ serviceLabel(o.service) }}</td>
@@ -114,6 +117,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
     th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid #eee; }
     .phone { display: block; color: #666; font-size: 0.85rem; }
     .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
+    .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.25rem; }
     .action button { padding: 0.55rem 0.9rem; font-size: 1rem; cursor: pointer; }
     .done { color: #666; }
     .empty { padding: 2rem 1rem; color: #666; }

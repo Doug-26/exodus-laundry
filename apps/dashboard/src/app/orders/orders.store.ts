@@ -2,6 +2,7 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import {
   cancelOrder,
   createOrder,
+  lookupCustomerByPhone,
   nextStatus,
   setFulfilment,
   subscribeActiveOrders,
@@ -60,6 +61,11 @@ export class OrdersStore {
   /** Live subscription to a single order (for the detail screen). Returns an unsubscribe. */
   watch(id: string, cb: (order: OrderWithId | null) => void): () => void {
     return subscribeOrder(this.fb.firestore, id, cb);
+  }
+
+  /** Look up a customer account by phone (name only; customer-role accounts only). */
+  lookupCustomer(phoneRaw: string): Promise<{ uid: string; name: string } | null> {
+    return lookupCustomerByPhone(this.fb.firestore, phoneRaw);
   }
 
   create(input: CreateOrderInput): Promise<{ id: string; claimNumber: string }> {

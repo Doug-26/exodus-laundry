@@ -36,6 +36,7 @@ export {
   createUserProfile,
   getUserProfile,
   findUserByPhone,
+  lookupCustomerByPhone,
   PhoneTakenError,
 } from './services/users';
 export type { CreateUserProfileInput } from './services/users';
@@ -52,6 +53,7 @@ export {
   updateOrderStatus,
   setFulfilment,
   cancelOrder,
+  linkGuestOrdersToCustomer,
   subscribeActiveOrders,
   getOrder,
   subscribeOrder,

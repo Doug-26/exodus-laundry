@@ -6,6 +6,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -13,6 +14,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { toCanonical } from '../utils/phone';
 import type {
@@ -132,6 +134,8 @@ export interface CreateOrderInput {
   price: number | null;
   notes: string;
   shopLocation: ShopLocation;
+  /** App-account uid when the walk-in was matched at intake; null/omitted = guest. */
+  customerId?: string | null;
 }
 
 type OrderWrite = Omit<Order, 'createdAt' | 'updatedAt'> & {
@@ -162,7 +166,7 @@ export async function createOrder(
     tx.set(counterRef, { seq }, { merge: true });
 
     const write: OrderWrite = {
-      customerId: null,
+      customerId: input.customerId ?? null,
       guestContact: { name: input.guestName, phone },
       createdBy: input.createdBy,
       source: 'walk_in',
@@ -227,6 +231,38 @@ export async function cancelOrder(firestore: Firestore, id: string): Promise<voi
     updatedAt: serverTimestamp(),
     statusHistory: arrayUnion({ status: 'cancelled', at: Timestamp.now() }),
   });
+}
+
+/**
+ * Retroactively attach prior guest orders (customerId === null) matching the
+ * given phone to a newly-registered customer account. Best-effort; returns the
+ * number of orders linked. The customerId === null filter is applied client-side
+ * so the query needs only the automatic single-field index on guestContact.phone.
+ */
+export async function linkGuestOrdersToCustomer(
+  firestore: Firestore,
+  phoneRaw: string,
+  uid: string,
+): Promise<number> {
+  let phone: string;
+  try {
+    phone = toCanonical(phoneRaw);
+  } catch {
+    return 0;
+  }
+  const snap = await getDocs(
+    query(collection(firestore, 'orders'), where('guestContact.phone', '==', phone)),
+  );
+  const toLink = snap.docs.filter((d) => (d.data() as Order).customerId === null);
+  if (toLink.length === 0) {
+    return 0;
+  }
+  const batch = writeBatch(firestore);
+  for (const d of toLink) {
+    batch.update(d.ref, { customerId: uid, updatedAt: serverTimestamp() });
+  }
+  await batch.commit();
+  return toLink.length;
 }
 
 /** Live subscription to the active queue (unsorted; sort client-side, null createdAt = newest). */

@@ -24,6 +24,8 @@ const EMPTY: NewOrderModel = {
   notes: '',
 };
 
+type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
+
 @Component({
   selector: 'app-new-order',
   imports: [FormField, RouterLink],
@@ -33,18 +35,47 @@ const EMPTY: NewOrderModel = {
       <h1>New Order</h1>
 
       <form (submit)="submit($event)" novalidate>
-        <label for="name">Customer name</label>
-        <input id="name" type="text" autocomplete="name" [formField]="f.name"
-               [attr.aria-invalid]="err(f.name().touched(), f.name().invalid())" />
-        @if (err(f.name().touched(), f.name().invalid())) {
-          <p class="field-error" role="alert">{{ f.name().errors()[0]?.message }}</p>
-        }
-
         <label for="phone">Mobile number</label>
-        <input id="phone" type="tel" inputmode="tel" placeholder="0917 123 4567" [formField]="f.phone"
-               [attr.aria-invalid]="phoneError() !== null" />
+        <div class="phone-row">
+          <input
+            id="phone"
+            type="tel"
+            inputmode="tel"
+            placeholder="0917 123 4567"
+            [formField]="f.phone"
+            (input)="onPhoneInput()"
+            [attr.aria-invalid]="phoneError() !== null"
+          />
+          <button type="button" (click)="lookupAccount()" [disabled]="lookupState() === 'busy'">
+            {{ lookupState() === 'busy' ? 'Looking up…' : 'Look up account' }}
+          </button>
+        </div>
         @if (phoneError()) {
           <p class="field-error" role="alert">{{ phoneError() }}</p>
+        }
+        @if (lookupState() === 'match') {
+          <p class="banner banner--ok" role="status">Linked to {{ matchedName() }}'s account.</p>
+        } @else if (lookupState() === 'nomatch') {
+          <p class="banner banner--info" role="status">
+            No app account for this number — it will be saved as a guest. Tip: have them install the
+            app and register with this number, and their orders link automatically.
+          </p>
+        }
+
+        <label for="name">Customer name</label>
+        @if (linkedCustomerId() !== null) {
+          <output id="name" class="readonly-name">{{ matchedName() }}</output>
+        } @else {
+          <input
+            id="name"
+            type="text"
+            autocomplete="name"
+            [formField]="f.name"
+            [attr.aria-invalid]="err(f.name().touched(), f.name().invalid())"
+          />
+          @if (err(f.name().touched(), f.name().invalid())) {
+            <p class="field-error" role="alert">{{ f.name().errors()[0]?.message }}</p>
+          }
         }
 
         <label for="service">Service</label>
@@ -80,10 +111,16 @@ const EMPTY: NewOrderModel = {
     form { display: flex; flex-direction: column; gap: 0.5rem; }
     label { font-weight: 600; }
     input, select, textarea { padding: 0.6rem; font-size: 1rem; }
-    button { padding: 0.75rem; font-size: 1.05rem; cursor: pointer; margin-top: 0.5rem; }
+    .phone-row { display: flex; gap: 0.5rem; }
+    .phone-row input { flex: 1; }
+    .phone-row button { padding: 0.6rem 0.9rem; cursor: pointer; white-space: nowrap; }
+    .readonly-name { display: block; padding: 0.6rem; background: #f2f2f2; border-radius: 0.25rem; }
+    button[type='submit'] { padding: 0.75rem; font-size: 1.05rem; cursor: pointer; margin-top: 0.5rem; }
     .field-error { color: #b3261e; margin: 0; font-size: 0.85rem; }
     .banner { padding: 0.6rem; border-radius: 0.25rem; margin: 0; }
     .banner--error { background: #fce8e6; color: #b3261e; }
+    .banner--ok { background: #e6f4ea; color: #1e7e34; }
+    .banner--info { background: #eef; color: #33438a; }
   `,
 })
 export class NewOrderComponent {
@@ -105,8 +142,47 @@ export class NewOrderComponent {
   protected readonly phoneError = signal<string | null>(null);
   protected readonly submitted = signal(false);
 
+  protected readonly lookupState = signal<LookupState>('idle');
+  protected readonly matchedName = signal<string | null>(null);
+  protected readonly linkedCustomerId = signal<string | null>(null);
+
   protected err(touched: boolean, invalid: boolean): boolean {
     return (touched || this.submitted()) && invalid;
+  }
+
+  /** Changing the phone clears any established link. */
+  protected onPhoneInput(): void {
+    if (this.linkedCustomerId() !== null || this.lookupState() !== 'idle') {
+      this.linkedCustomerId.set(null);
+      this.matchedName.set(null);
+      this.lookupState.set('idle');
+    }
+  }
+
+  protected async lookupAccount(): Promise<void> {
+    this.phoneError.set(null);
+    const phone = this.model().phone;
+    if (!isValidPhPhone(safeCanonical(phone))) {
+      this.phoneError.set('Enter a valid PH mobile number.');
+      return;
+    }
+    this.lookupState.set('busy');
+    try {
+      const match = await this.store.lookupCustomer(phone);
+      if (match) {
+        this.linkedCustomerId.set(match.uid);
+        this.matchedName.set(match.name);
+        this.model.update((m) => ({ ...m, name: match.name }));
+        this.lookupState.set('match');
+      } else {
+        this.linkedCustomerId.set(null);
+        this.matchedName.set(null);
+        this.lookupState.set('nomatch');
+      }
+    } catch {
+      this.lookupState.set('idle');
+      this.phoneError.set('Lookup failed. Please try again.');
+    }
   }
 
   async submit(event: Event): Promise<void> {
@@ -141,6 +217,7 @@ export class NewOrderComponent {
         price: v.price,
         notes: v.notes.trim(),
         shopLocation: SHOP_LOCATION,
+        customerId: this.linkedCustomerId(),
       });
       await this.router.navigate(['/'], { queryParams: { created: claimNumber } });
     } catch {

@@ -23,7 +23,13 @@ import { OrdersStore } from '../../orders/orders.store';
         <h1>{{ o.claimNumber }}</h1>
 
         <dl>
-          <dt>Customer</dt><dd>{{ o.guestContact?.name }} — {{ o.guestContact?.phone }}</dd>
+          <dt>Customer</dt>
+          <dd>
+            {{ o.guestContact?.name }} — {{ o.guestContact?.phone }}
+            @if (o.customerId !== null) {
+              <span class="badge">Linked</span>
+            }
+          </dd>
           <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
           <dt>Weight</dt><dd>{{ o.weightKg !== null ? o.weightKg + ' kg' : '—' }}</dd>
           <dt>Price</dt><dd>{{ o.price !== null ? '₱' + o.price : '—' }}</dd>
@@ -60,6 +66,7 @@ import { OrdersStore } from '../../orders/orders.store';
     dt { font-weight: 600; }
     dd { margin: 0; }
     .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
+    .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; }
     .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0.5rem 0; }
     .actions button { padding: 0.65rem 1rem; font-size: 1rem; cursor: pointer; }
     .danger { color: #b3261e; }
