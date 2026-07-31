@@ -1,10 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormField, form, min, required } from '@angular/forms/signals';
-import { SERVICES, isValidPhPhone, toCanonical } from '@exodus/shared';
+import { SERVICES, SHOP_LOCATION, isValidPhPhone, toCanonical } from '@exodus/shared';
 import { AuthService } from '../../auth/auth.service';
 import { OrdersStore } from '../../orders/orders.store';
-import { SHOP_LOCATION } from '../../shop.config';
 
 interface NewOrderModel {
   name: string;

@@ -19,7 +19,9 @@ import {
 import { toCanonical } from '../utils/phone';
 import type {
   Fulfilment,
+  IntakeMethod,
   Order,
+  OrderSource,
   OrderStatus,
   OrderWithId,
   ShopLocation,
@@ -65,6 +67,7 @@ export function activeFor(status: OrderStatus): boolean {
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
+  requested: 'Requested',
   received: 'Received',
   washing: 'Washing',
   drying: 'Drying',
@@ -82,6 +85,7 @@ export function statusLabel(status: OrderStatus): string {
 }
 
 const LINEAR_NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
+  requested: 'received',
   received: 'washing',
   washing: 'drying',
   drying: 'folding',
@@ -136,6 +140,10 @@ export interface CreateOrderInput {
   shopLocation: ShopLocation;
   /** App-account uid when the walk-in was matched at intake; null/omitted = guest. */
   customerId?: string | null;
+  /** 'walk_in' (default, staff-created) or 'app' (customer self-service). */
+  source?: OrderSource;
+  /** Inbound intake choice for app orders (drop-off vs shop pickup); null for walk-ins. */
+  intakeMethod?: IntakeMethod;
 }
 
 type OrderWrite = Omit<Order, 'createdAt' | 'updatedAt'> & {
@@ -165,14 +173,18 @@ export async function createOrder(
 
     tx.set(counterRef, { seq }, { merge: true });
 
+    // App orders start at 'requested' (laundry not yet at the shop); walk-ins at 'received'.
+    const initialStatus: OrderStatus = input.source === 'app' ? 'requested' : 'received';
+
     const write: OrderWrite = {
       customerId: input.customerId ?? null,
       guestContact: { name: input.guestName, phone },
       createdBy: input.createdBy,
-      source: 'walk_in',
+      source: input.source ?? 'walk_in',
       claimNumber: claim,
-      status: 'received',
+      status: initialStatus,
       fulfilment: null,
+      intakeMethod: input.intakeMethod ?? null,
       service: input.service,
       loadCount: input.loadCount,
       weightKg: input.weightKg,
@@ -183,7 +195,7 @@ export async function createOrder(
       assignedRiderId: null,
       routeCache: null,
       active: true,
-      statusHistory: [{ status: 'received', at: Timestamp.now() }],
+      statusHistory: [{ status: initialStatus, at: Timestamp.now() }],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -222,6 +234,19 @@ export async function setFulfilment(
   fulfilment: Fulfilment,
 ): Promise<void> {
   await updateDoc(doc(firestore, 'orders', id), { fulfilment, updatedAt: serverTimestamp() });
+}
+
+/**
+ * Staff edit of intake details (e.g. pricing an app order that arrived unweighed).
+ * Partial patch — only the provided fields are written, so it never clobbers
+ * fields it wasn't given (e.g. the customer's notes). Does not touch status/active.
+ */
+export async function updateOrderDetails(
+  firestore: Firestore,
+  id: string,
+  patch: Partial<Pick<Order, 'weightKg' | 'price' | 'notes' | 'loadCount'>>,
+): Promise<void> {
+  await updateDoc(doc(firestore, 'orders', id), { ...patch, updatedAt: serverTimestamp() });
 }
 
 export async function cancelOrder(firestore: Firestore, id: string): Promise<void> {
@@ -271,6 +296,21 @@ export function subscribeActiveOrders(
   cb: (orders: OrderWithId[]) => void,
 ): Unsubscribe {
   const q = query(collection(firestore, 'orders'), where('active', '==', true));
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) })));
+  });
+}
+
+/**
+ * Live subscription to all of a customer's orders (active + history), unsorted.
+ * Single-field equality on customerId → automatic index (no composite).
+ */
+export function subscribeCustomerOrders(
+  firestore: Firestore,
+  uid: string,
+  cb: (orders: OrderWithId[]) => void,
+): Unsubscribe {
+  const q = query(collection(firestore, 'orders'), where('customerId', '==', uid));
   return onSnapshot(q, (snap) => {
     cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) })));
   });

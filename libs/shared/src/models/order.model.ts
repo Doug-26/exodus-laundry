@@ -1,6 +1,7 @@
 import type { Timestamp } from './timestamp.model';
 
 export type OrderStatus =
+  | 'requested'
   | 'received'
   | 'washing'
   | 'drying'
@@ -12,7 +13,14 @@ export type OrderStatus =
   | 'completed'
   | 'cancelled';
 
+/** Outbound: how the CLEAN laundry gets back to the customer (chosen after 'ready'). */
 export type Fulfilment = 'pickup' | 'delivery' | null;
+
+/**
+ * Inbound: how the DIRTY laundry reaches the shop (chosen at app-order creation).
+ * 'dropoff' = customer brings it; 'pickup' = shop collects from the customer; null = walk-in/N/A.
+ */
+export type IntakeMethod = 'dropoff' | 'pickup' | null;
 
 export type OrderSource = 'walk_in' | 'app';
 
@@ -56,6 +64,8 @@ export interface Order {
   claimNumber: string;
   status: OrderStatus;
   fulfilment: Fulfilment;
+  /** Inbound intake choice for app orders (drop-off vs shop pickup); null for walk-ins. */
+  intakeMethod: IntakeMethod;
   service: string;
   loadCount: number | null;
   weightKg: number | null;

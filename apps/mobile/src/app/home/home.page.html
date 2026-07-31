@@ -1,11 +1,30 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Exodus Laundry</ion-title>
+    <ion-title>My Orders</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">Sign out</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <p>Welcome, {{ auth.profile()?.name }}.</p>
-  <p>Your orders will appear here (coming in a later phase).</p>
-  <ion-button expand="block" fill="outline" (click)="logout()">Sign out</ion-button>
+  <ion-button expand="block" routerLink="/orders/new">+ New order</ion-button>
+
+  @if (store.orders().length === 0) {
+    <p class="empty">No orders yet. Tap “New order” to place one.</p>
+  } @else {
+    <ion-list>
+      @for (o of store.orders(); track o.id) {
+        <ion-item button [routerLink]="['/orders', o.id]" detail="true">
+          <ion-label>
+            <h2>{{ o.claimNumber }} — {{ serviceLabel(o.service) }}</h2>
+            <p>{{ statusLabel(o.status) }}</p>
+          </ion-label>
+          <ion-note slot="end">
+            {{ o.createdAt ? (o.createdAt.toDate() | date: 'MMM d') : 'just now' }}
+          </ion-note>
+        </ion-item>
+      }
+    </ion-list>
+  }
 </ion-content>

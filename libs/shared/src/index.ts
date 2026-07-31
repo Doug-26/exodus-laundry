@@ -6,6 +6,7 @@ export type {
   OrderWithId,
   OrderStatus,
   Fulfilment,
+  IntakeMethod,
   OrderSource,
   GuestContact,
   Destination,
@@ -53,9 +54,14 @@ export {
   updateOrderStatus,
   setFulfilment,
   cancelOrder,
+  updateOrderDetails,
   linkGuestOrdersToCustomer,
   subscribeActiveOrders,
+  subscribeCustomerOrders,
   getOrder,
   subscribeOrder,
 } from './services/orders';
 export type { ServiceOption, CreateOrderInput } from './services/orders';
+
+// Config
+export { SHOP_LOCATION } from './config/shop';

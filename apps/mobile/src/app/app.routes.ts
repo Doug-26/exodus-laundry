@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
-import { authGuard, customerRiderGuard, redirectIfAuthedGuard } from './auth/auth.guards';
+import {
+  authGuard,
+  customerGuard,
+  customerRiderGuard,
+  redirectIfAuthedGuard,
+} from './auth/auth.guards';
 
 export const routes: Routes = [
   {
@@ -14,8 +19,20 @@ export const routes: Routes = [
   },
   {
     path: 'home',
-    canActivate: [authGuard, customerRiderGuard],
+    canActivate: [authGuard, customerGuard],
     loadComponent: () => import('./home/home.page').then((m) => m.HomePage),
+  },
+  {
+    // Declared before 'orders/:id' (first-match router).
+    path: 'orders/new',
+    canActivate: [authGuard, customerGuard],
+    loadComponent: () => import('./features/new-order/new-order.page').then((m) => m.NewOrderPage),
+  },
+  {
+    path: 'orders/:id',
+    canActivate: [authGuard, customerGuard],
+    loadComponent: () =>
+      import('./features/order-detail/order-detail.page').then((m) => m.OrderDetailPage),
   },
   {
     path: 'rider',

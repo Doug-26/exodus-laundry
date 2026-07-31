@@ -11,6 +11,7 @@ import { AuthService } from '../../auth/auth.service';
 import { OrdersStore } from '../../orders/orders.store';
 
 const STATUS_OPTIONS: OrderStatus[] = [
+  'requested',
   'received',
   'washing',
   'drying',
@@ -81,8 +82,13 @@ const STATUS_OPTIONS: OrderStatus[] = [
               <td><a [routerLink]="['/orders', o.id]">{{ o.claimNumber }}</a></td>
               <td>
                 {{ o.guestContact?.name }}
-                @if (o.customerId !== null) {
+                @if (o.source === 'app') {
+                  <span class="badge badge--app">App</span>
+                } @else if (o.customerId !== null) {
                   <span class="badge">Linked</span>
+                }
+                @if (o.intakeMethod === 'pickup') {
+                  <span class="badge badge--pickup">Pickup</span>
                 }
                 <span class="phone">{{ o.guestContact?.phone }}</span>
               </td>
@@ -118,6 +124,8 @@ const STATUS_OPTIONS: OrderStatus[] = [
     .phone { display: block; color: #666; font-size: 0.85rem; }
     .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
     .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.25rem; }
+    .badge--app { background: #e8f0fe; color: #1967d2; }
+    .badge--pickup { background: #fef7e0; color: #b06000; }
     .action button { padding: 0.55rem 0.9rem; font-size: 1rem; cursor: pointer; }
     .done { color: #666; }
     .empty { padding: 2rem 1rem; color: #666; }

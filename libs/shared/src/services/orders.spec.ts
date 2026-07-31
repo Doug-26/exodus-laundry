@@ -9,6 +9,7 @@ import {
   nextStatus,
   serviceLabel,
   setFulfilment,
+  updateOrderDetails,
   updateOrderStatus,
   type CreateOrderInput,
 } from './orders';
@@ -53,7 +54,8 @@ describe('formatClaimNumber', () => {
 });
 
 describe('nextStatus', () => {
-  it('walks the linear pre-ready flow', () => {
+  it('walks the linear pre-ready flow (incl. requested → received for app orders)', () => {
+    expect(nextStatus('requested', null)).toBe('received');
     expect(nextStatus('received', null)).toBe('washing');
     expect(nextStatus('washing', null)).toBe('drying');
     expect(nextStatus('drying', null)).toBe('folding');
@@ -135,6 +137,48 @@ describe('createOrder', () => {
     const orderSet = __mockState.setCalls.find((c) => c.collection === 'orders');
     expect(orderSet?.data['customerId']).toBe('cust1');
     expect((orderSet?.data['guestContact'] as { name: string }).name).toBe('Ana');
+  });
+
+  it('walk-in default: source walk_in, status received, intakeMethod null', async () => {
+    await createOrder(db, validInput);
+    const orderSet = __mockState.setCalls.find((c) => c.collection === 'orders');
+    expect(orderSet?.data['source']).toBe('walk_in');
+    expect(orderSet?.data['status']).toBe('received');
+    expect(orderSet?.data['intakeMethod']).toBeNull();
+  });
+
+  it('app order: source app, status requested (seeded in history), intakeMethod stored', async () => {
+    await createOrder(db, {
+      ...validInput,
+      source: 'app',
+      customerId: 'cust9',
+      intakeMethod: 'pickup',
+      weightKg: null,
+      price: null,
+    });
+    const orderSet = __mockState.setCalls.find((c) => c.collection === 'orders');
+    expect(orderSet?.data['source']).toBe('app');
+    expect(orderSet?.data['customerId']).toBe('cust9');
+    expect(orderSet?.data['status']).toBe('requested');
+    expect((orderSet?.data['statusHistory'] as { status: string }[])[0].status).toBe('requested');
+    expect(orderSet?.data['intakeMethod']).toBe('pickup');
+    expect(orderSet?.data['weightKg']).toBeNull();
+    expect(orderSet?.data['price']).toBeNull();
+  });
+});
+
+describe('updateOrderDetails', () => {
+  beforeEach(() => __resetMockState());
+
+  it('writes only the provided fields plus updatedAt (partial, no clobber)', async () => {
+    await updateOrderDetails(db, 'o1', { weightKg: 5.5, price: 275 });
+    const u = __mockState.updateCalls[0];
+    expect(u.id).toBe('o1');
+    expect(u.data['weightKg']).toBe(5.5);
+    expect(u.data['price']).toBe(275);
+    expect(u.data['updatedAt']).toBeDefined();
+    expect('notes' in u.data).toBe(false);
+    expect('status' in u.data).toBe(false);
   });
 });
 

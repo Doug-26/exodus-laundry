@@ -12,6 +12,7 @@ import {
   type UserRole,
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
+import { OrdersStore } from '../orders/orders.store';
 
 export type AuthStatus = 'initializing' | 'authed' | 'anon';
 
@@ -25,6 +26,7 @@ export interface CustomerSignupInput {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly fb = inject(FIREBASE);
+  private readonly ordersStore = inject(OrdersStore);
 
   private readonly _firebaseUser = signal<FirebaseUser | null>(null);
   private readonly _profile = signal<User | null>(null);
@@ -63,6 +65,9 @@ export class AuthService {
 
   async loginEmail(email: string, password: string): Promise<void> {
     const cred = await signInWithEmail(this.fb.auth, email, password);
+    // Set the user eagerly (don't wait for onAuthChange) so pages that read
+    // firebaseUser().uid right after login — e.g. the order list — get it.
+    this._firebaseUser.set(cred.user);
     // Load the profile eagerly so post-login role routing sees a fresh role.
     try {
       this._profile.set(await getUserProfile(this.fb.firestore, cred.user.uid));
@@ -74,6 +79,7 @@ export class AuthService {
   /** Self-service registration. Always creates a customer. */
   async signupCustomer(input: CustomerSignupInput): Promise<void> {
     const cred = await signUpWithEmail(this.fb.auth, input.email, input.password);
+    this._firebaseUser.set(cred.user);
     try {
       await createUserProfile(this.fb.firestore, cred.user.uid, {
         name: input.name,
@@ -96,6 +102,7 @@ export class AuthService {
   }
 
   logout() {
+    this.ordersStore.disconnect();
     return signOutUser(this.fb.auth);
   }
 }

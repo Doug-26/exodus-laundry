@@ -1,4 +1,4 @@
-import type { ShopLocation } from '@exodus/shared';
+import type { ShopLocation } from '../models/order.model';
 
 /**
  * Shop location, stored on every order for later delivery routing (Phase 7).

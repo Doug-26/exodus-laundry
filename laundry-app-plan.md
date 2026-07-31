@@ -128,9 +128,13 @@ This is a hard design requirement, not polish. The shop has many customers comin
 ```
 
 Status enum (store exactly these strings):
-`received | washing | drying | folding | ready | for_delivery | out_for_delivery | picked_up | completed | cancelled`
+`requested | received | washing | drying | folding | ready | for_delivery | out_for_delivery | picked_up | completed | cancelled`
 
-Fulfilment enum: `pickup | delivery | null` (null until chosen, or set directly by staff for pure walk-in pickup).
+**`requested` (Phase 4.1 addition):** in-app orders start here — the customer placed the order but the laundry is not yet at the shop. Staff advance `requested → received` when it physically arrives (customer drop-off or shop pickup). **Walk-in orders skip `requested` and start at `received`** (handed over at the counter).
+
+Fulfilment enum (**outbound** — clean laundry back to customer): `pickup | delivery | null` (null until chosen, or set directly by staff for pure walk-in pickup).
+
+Intake enum (**inbound** — dirty laundry to the shop, Phase 4.1): `dropoff | pickup | null`. Set at in-app order creation: `dropoff` = customer brings it; `pickup` = customer requests the shop collect it (staff coordinate by phone; map/rider collection is a later delivery-phase feature). `null` for walk-ins.
 
 ---
 
@@ -154,8 +158,9 @@ orders/{orderId}
   createdBy: string                // userId of staff (walk-in) or customer (in-app)
   source: "walk_in" | "app"
   claimNumber: string
-  status: <status enum>            // see §5
-  fulfilment: "pickup" | "delivery" | null
+  status: <status enum>            // see §5 (app orders start at "requested")
+  fulfilment: "pickup" | "delivery" | null   // OUTBOUND: clean laundry back to customer
+  intakeMethod: "dropoff" | "pickup" | null  // INBOUND (Phase 4.1): dirty laundry to shop; null for walk-ins
   service: string                  // e.g. "wash_fold", "dry_clean"
   loadCount: number | null
   weightKg: number | null

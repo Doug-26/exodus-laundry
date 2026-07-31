@@ -27,6 +27,22 @@ export const customerRiderGuard: CanActivateFn = async () => {
   return router.createUrlTree(['/login'], { queryParams: { denied: 'surface' } });
 };
 
+/** Customer-only routes (order list / new order / detail). Riders → /rider; others signed out. */
+export const customerGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  await auth.ready;
+  const role = auth.role();
+  if (role === 'customer') {
+    return true;
+  }
+  if (role === 'rider') {
+    return router.createUrlTree(['/rider']);
+  }
+  await auth.logout();
+  return router.createUrlTree(['/login'], { queryParams: { denied: 'surface' } });
+};
+
 /** For /login and /signup: send already-authorized users to their home. */
 export const redirectIfAuthedGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);

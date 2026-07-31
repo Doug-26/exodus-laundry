@@ -7,9 +7,11 @@ import {
   setFulfilment,
   subscribeActiveOrders,
   subscribeOrder,
+  updateOrderDetails,
   updateOrderStatus,
   type CreateOrderInput,
   type Fulfilment,
+  type Order,
   type OrderStatus,
   type OrderWithId,
 } from '@exodus/shared';
@@ -79,6 +81,13 @@ export class OrdersStore {
 
   setFulfilment(id: string, fulfilment: Fulfilment): Promise<void> {
     return setFulfilment(this.fb.firestore, id, fulfilment);
+  }
+
+  updateDetails(
+    id: string,
+    patch: Partial<Pick<Order, 'weightKg' | 'price' | 'notes' | 'loadCount'>>,
+  ): Promise<void> {
+    return updateOrderDetails(this.fb.firestore, id, patch);
   }
 
   cancel(id: string): Promise<void> {
