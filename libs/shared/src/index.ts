@@ -38,6 +38,8 @@ export {
   getUserProfile,
   findUserByPhone,
   lookupCustomerByPhone,
+  addFcmToken,
+  removeFcmToken,
   PhoneTakenError,
 } from './services/users';
 export type { CreateUserProfileInput } from './services/users';

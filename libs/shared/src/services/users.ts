@@ -5,6 +5,9 @@ import {
   getDoc,
   runTransaction,
   serverTimestamp,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { toCanonical } from '../utils/phone';
 import type { User, UserRole } from '../models/user.model';
@@ -101,6 +104,25 @@ export async function lookupCustomerByPhone(
     return null;
   }
   return { uid: match.uid, name: profile.name };
+}
+
+/**
+ * Register a device's FCM token on the customer's profile (idempotent —
+ * arrayUnion won't duplicate). Called after login once push registration
+ * yields a token. Requires connectivity is NOT necessary — updateDoc queues
+ * offline and syncs later.
+ */
+export async function addFcmToken(firestore: Firestore, uid: string, token: string): Promise<void> {
+  await updateDoc(doc(firestore, 'users', uid), { fcmTokens: arrayUnion(token) });
+}
+
+/** Remove a device's FCM token from the customer's profile (on logout). */
+export async function removeFcmToken(
+  firestore: Firestore,
+  uid: string,
+  token: string,
+): Promise<void> {
+  await updateDoc(doc(firestore, 'users', uid), { fcmTokens: arrayRemove(token) });
 }
 
 export type { UserRole };

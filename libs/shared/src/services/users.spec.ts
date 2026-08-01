@@ -1,8 +1,10 @@
 import {
+  addFcmToken,
   createUserProfile,
   findUserByPhone,
   getUserProfile,
   lookupCustomerByPhone,
+  removeFcmToken,
   PhoneTakenError,
 } from './users';
 import { __mockState, __resetMockState } from '../../__mocks__/firebase-firestore';
@@ -112,5 +114,25 @@ describe('lookupCustomerByPhone', () => {
 
   it('returns null for an unregistered phone', async () => {
     await expect(lookupCustomerByPhone(db, '+639170000000')).resolves.toBeNull();
+  });
+});
+
+describe('addFcmToken / removeFcmToken', () => {
+  beforeEach(() => __resetMockState());
+
+  it('adds a token via arrayUnion on users/{uid}', async () => {
+    await addFcmToken(db, 'uid1', 'tok-abc');
+
+    const call = __mockState.updateCalls.find((c) => c.collection === 'users');
+    expect(call?.id).toBe('uid1');
+    expect(call?.data['fcmTokens']).toEqual({ __arrayUnion: ['tok-abc'] });
+  });
+
+  it('removes a token via arrayRemove on users/{uid}', async () => {
+    await removeFcmToken(db, 'uid1', 'tok-abc');
+
+    const call = __mockState.updateCalls.find((c) => c.collection === 'users');
+    expect(call?.id).toBe('uid1');
+    expect(call?.data['fcmTokens']).toEqual({ __arrayRemove: ['tok-abc'] });
   });
 });

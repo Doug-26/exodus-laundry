@@ -209,6 +209,8 @@ Written by the rider app every few seconds; read by the customer app. **Delete t
 
 **Acceptance:** advancing a linked order to `ready` makes the customer's device show a notification that opens the correct order.
 
+> **Phase 5 scope note:** the tap deep-links to the **read-only** order screen. The customer-facing **Pick up / Deliver** choice ships with the delivery/maps phase (6+), which owns that UI + logistics; until then staff set `fulfilment` from the dashboard. When the app is foreground (no system tray), an in-app toast is shown instead. Android only for launch.
+
 ---
 
 ## 8. Feature: delivery location capture + "Is this your delivery address?"
@@ -363,7 +365,7 @@ Customer gives phone number → staff types it → [Next]
 ### Phase 5 — "Ready" notification
 **Goal:** advancing to `ready` notifies the linked customer.
 **Tasks:** `@capacitor/push-notifications` (permission + register token to `users/{id}.fcmTokens`); Cloud Function on transition into `ready` (skip if `customerId` null; send FCM `{orderId, type:"ready"}`); deep-link tap to the order screen with **Pick up / Deliver**.
-**Acceptance:** advancing a linked order to `ready` shows a push that opens the right order; a guest order sends nothing and does not error.
+**Acceptance:** advancing a linked order to `ready` shows a push that opens the right order; a guest order sends nothing and does not error. (Tap opens the read-only detail; the Pick up / Deliver choice is deferred to the delivery phase. Foreground shows an in-app toast. Android only.)
 
 ### Phase 6 — Delivery location capture + pin confirm
 **Goal:** customer sets delivery destination on their own device (§8).

@@ -13,6 +13,7 @@ import {
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
 import { OrdersStore } from '../orders/orders.store';
+import { PushService } from '../push/push.service';
 
 export type AuthStatus = 'initializing' | 'authed' | 'anon';
 
@@ -27,6 +28,7 @@ export interface CustomerSignupInput {
 export class AuthService {
   private readonly fb = inject(FIREBASE);
   private readonly ordersStore = inject(OrdersStore);
+  private readonly push = inject(PushService);
 
   private readonly _firebaseUser = signal<FirebaseUser | null>(null);
   private readonly _profile = signal<User | null>(null);
@@ -52,6 +54,8 @@ export class AuthService {
           this._profile.set(null);
         }
         this._status.set('authed');
+        // Register this device for the "laundry is ready" push (native-only; idempotent).
+        void this.push.connect(user.uid);
       } else {
         this._profile.set(null);
         this._status.set('anon');
@@ -101,8 +105,10 @@ export class AuthService {
     );
   }
 
-  logout() {
+  async logout(): Promise<void> {
     this.ordersStore.disconnect();
-    return signOutUser(this.fb.auth);
+    // Drop this device's push token while we still have the uid, then sign out.
+    await this.push.disconnect();
+    await signOutUser(this.fb.auth);
   }
 }

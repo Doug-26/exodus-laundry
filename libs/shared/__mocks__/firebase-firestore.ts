@@ -104,6 +104,10 @@ export function arrayUnion(...items: unknown[]): { __arrayUnion: unknown[] } {
   return { __arrayUnion: items };
 }
 
+export function arrayRemove(...items: unknown[]): { __arrayRemove: unknown[] } {
+  return { __arrayRemove: items };
+}
+
 function snapFor(ref: Ref) {
   if (ref.collection === 'phoneNumbers') {
     return { exists: () => __mockState.phoneExists, data: () => __mockState.phoneDocData };

@@ -10,4 +10,4 @@ import { initializeApp } from 'firebase-admin/app';
 
 initializeApp();
 
-// Phase 5: export { onOrderReady } from './notifications/on-order-ready';
+export { onOrderReady } from './notifications/on-order-ready';

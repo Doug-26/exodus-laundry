@@ -30,6 +30,8 @@ import { OrdersStore } from '../../orders/orders.store';
               <span class="badge badge--app">App</span>
             } @else if (o.customerId !== null) {
               <span class="badge">Linked</span>
+            } @else {
+              <span class="badge badge--walkin">Walk-in</span>
             }
           </dd>
           <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
@@ -94,6 +96,7 @@ import { OrdersStore } from '../../orders/orders.store';
     .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
     .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; }
     .badge--app { background: #e8f0fe; color: #1967d2; }
+    .badge--walkin { background: #eceff1; color: #546e7a; }
     .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0.5rem 0; }
     .actions button { padding: 0.65rem 1rem; font-size: 1rem; cursor: pointer; }
     .danger { color: #b3261e; }
