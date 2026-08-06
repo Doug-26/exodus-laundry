@@ -1,9 +1,13 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import {
+  confirmDelivery,
   createOrder,
+  setFulfilment,
   subscribeCustomerOrders,
   subscribeOrder,
   type CreateOrderInput,
+  type Destination,
+  type OrderStatus,
   type OrderWithId,
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
@@ -54,5 +58,15 @@ export class OrdersStore {
 
   create(input: CreateOrderInput): Promise<{ id: string; claimNumber: string }> {
     return createOrder(this.fb.firestore, input);
+  }
+
+  /** Customer chooses to collect the order at the shop (order stays 'ready'). */
+  choosePickup(id: string): Promise<void> {
+    return setFulfilment(this.fb.firestore, id, 'pickup');
+  }
+
+  /** Customer confirms a delivery pin: writes destination + advances to 'for_delivery'. */
+  confirmDelivery(id: string, destination: Destination, currentStatus: OrderStatus): Promise<void> {
+    return confirmDelivery(this.fb.firestore, id, destination, currentStatus);
   }
 }

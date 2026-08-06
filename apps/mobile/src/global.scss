@@ -35,3 +35,17 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+/**
+ * @capacitor/google-maps Android transparency fix (spec §12 #4).
+ * The native map renders BENEATH the WebView, so every layer above it must be
+ * transparent for the map to show through. Scoped to `body.map-open`, which the
+ * Deliver page toggles on enter/leave, so all other screens keep their theme.
+ */
+body.map-open,
+body.map-open ion-app,
+body.map-open ion-content {
+  --ion-background-color: transparent;
+  --background: transparent;
+  background: transparent !important;
+}

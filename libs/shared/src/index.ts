@@ -55,6 +55,7 @@ export {
   createOrder,
   updateOrderStatus,
   setFulfilment,
+  confirmDelivery,
   cancelOrder,
   updateOrderDetails,
   linkGuestOrdersToCustomer,

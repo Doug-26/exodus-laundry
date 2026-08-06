@@ -209,7 +209,7 @@ Written by the rider app every few seconds; read by the customer app. **Delete t
 
 **Acceptance:** advancing a linked order to `ready` makes the customer's device show a notification that opens the correct order.
 
-> **Phase 5 scope note:** the tap deep-links to the **read-only** order screen. The customer-facing **Pick up / Deliver** choice ships with the delivery/maps phase (6+), which owns that UI + logistics; until then staff set `fulfilment` from the dashboard. When the app is foreground (no system tray), an in-app toast is shown instead. Android only for launch.
+> **Phase 5 scope note:** the tap deep-links to the **read-only** order screen. The customer-facing **Pick up / Deliver** choice shipped in **Phase 6** (order-detail buttons + a dedicated `orders/:id/deliver` map page). When the app is foreground (no system tray), an in-app toast is shown instead. Android only for launch.
 
 ---
 
@@ -369,7 +369,7 @@ Customer gives phone number → staff types it → [Next]
 
 ### Phase 6 — Delivery location capture + pin confirm
 **Goal:** customer sets delivery destination on their own device (§8).
-**Tasks:** integrate `@capacitor/google-maps` (apply Android transparency fix, §12); Deliver flow: `getCurrentPosition()` → map pin → "Is this your delivery address?" → drag/confirm + note → write `destination`, set `fulfilment:"delivery"`, `status:"for_delivery"`.
+**Tasks:** owns the customer **Pick up / Deliver** choice UI (deferred from Phase 5) on the order-detail screen; integrate `@capacitor/google-maps` + `@capacitor/geolocation` (apply Android transparency fix, §12) on a dedicated `orders/:id/deliver` page: `getCurrentPosition()` → map pin → "Is this your delivery address?" → drag/confirm + note → atomic `confirmDelivery` writes `destination`, sets `fulfilment:"delivery"`, `status:"for_delivery"`. Pick up reuses `setFulfilment('pickup')`. One-time lock after confirm; permission-denied falls back to the shop pin.
 **Acceptance:** choosing Deliver captures GPS, allows pin adjustment, persists `destination`; the counter never shows an address input.
 
 ### Phase 7 — Rider route line + ETA

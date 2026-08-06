@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { toCanonical } from '../utils/phone';
 import type {
+  Destination,
   Fulfilment,
   IntakeMethod,
   Order,
@@ -234,6 +235,32 @@ export async function setFulfilment(
   fulfilment: Fulfilment,
 ): Promise<void> {
   await updateDoc(doc(firestore, 'orders', id), { fulfilment, updatedAt: serverTimestamp() });
+}
+
+/**
+ * Customer confirms delivery from their own device (§8): write the destination
+ * pin, choose `delivery`, and advance `ready → for_delivery` — all in ONE
+ * updateDoc so we never persist a half-state (e.g. fulfilment set but no
+ * destination). `currentStatus` comes from the live snapshot the caller holds;
+ * guarded to `ready` so a re-confirm on an already-advanced order is rejected.
+ */
+export async function confirmDelivery(
+  firestore: Firestore,
+  id: string,
+  destination: Destination,
+  currentStatus: OrderStatus,
+): Promise<void> {
+  if (currentStatus !== 'ready') {
+    throw new InvalidTransitionError(currentStatus, 'for_delivery');
+  }
+  await updateDoc(doc(firestore, 'orders', id), {
+    destination,
+    fulfilment: 'delivery',
+    status: 'for_delivery',
+    active: activeFor('for_delivery'),
+    updatedAt: serverTimestamp(),
+    statusHistory: arrayUnion({ status: 'for_delivery', at: Timestamp.now() }),
+  });
 }
 
 /**

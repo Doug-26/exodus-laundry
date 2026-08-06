@@ -1,6 +1,7 @@
 import {
   activeFor,
   cancelOrder,
+  confirmDelivery,
   createOrder,
   dailyKey,
   formatClaimNumber,
@@ -262,5 +263,31 @@ describe('setFulfilment / cancelOrder', () => {
     const u = __mockState.updateCalls[0];
     expect(u.data['status']).toBe('cancelled');
     expect(u.data['active']).toBe(false);
+  });
+});
+
+describe('confirmDelivery', () => {
+  beforeEach(() => __resetMockState());
+
+  const dest = { lat: 13.62, lng: 123.19, addressNote: 'blue gate, 2nd floor' };
+
+  it('writes destination + delivery + for_delivery in one updateDoc', async () => {
+    await confirmDelivery(db, 'o1', dest, 'ready');
+
+    expect(__mockState.updateCalls).toHaveLength(1);
+    const u = __mockState.updateCalls[0];
+    expect(u.id).toBe('o1');
+    expect(u.data['destination']).toEqual(dest);
+    expect(u.data['fulfilment']).toBe('delivery');
+    expect(u.data['status']).toBe('for_delivery');
+    expect(u.data['active']).toBe(true);
+    expect(u.data['statusHistory']).toHaveProperty('__arrayUnion');
+  });
+
+  it('rejects when the order is not at ready, writing nothing', async () => {
+    await expect(confirmDelivery(db, 'o1', dest, 'washing')).rejects.toBeInstanceOf(
+      InvalidTransitionError,
+    );
+    expect(__mockState.updateCalls).toHaveLength(0);
   });
 });

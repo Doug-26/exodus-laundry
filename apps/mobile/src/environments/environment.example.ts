@@ -13,4 +13,7 @@ export const environment = {
     measurementId: '',
     databaseURL: '',
   },
+  // @capacitor/google-maps API key (Phase 6). Restrict to the Android package
+  // + Maps SDK for Android. Empty until GOOGLE_MAPS_API_KEY is set in .env.
+  googleMapsApiKey: '',
 };

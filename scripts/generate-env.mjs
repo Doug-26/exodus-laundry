@@ -69,6 +69,9 @@ const firebase = {
   databaseURL: env.FIREBASE_DATABASE_URL ?? '',
 };
 
+// Optional (mobile maps, Phase 6). Empty until a key is added to .env.
+const googleMapsApiKey = env.GOOGLE_MAPS_API_KEY ?? '';
+
 function fileContents(production) {
   return (
     '// AUTO-GENERATED from repo-root .env by scripts/generate-env.mjs.\n' +
@@ -76,6 +79,7 @@ function fileContents(production) {
     `export const environment = {\n` +
     `  production: ${production},\n` +
     `  firebase: ${JSON.stringify(firebase, null, 4).replace(/\n/g, '\n  ')},\n` +
+    `  googleMapsApiKey: ${JSON.stringify(googleMapsApiKey)},\n` +
     `};\n`
   );
 }
