@@ -21,7 +21,7 @@ const EMPTY: TeamModel = { name: '', email: '', phone: '', role: 'staff' };
       <a routerLink="/">← Back</a>
       <h1>Create staff / rider</h1>
 
-      <form (submit)="create($event)" novalidate>
+      <form class="card" (submit)="create($event)" novalidate>
         <label for="name">Full name</label>
         <input id="name" type="text" [formField]="f.name" [attr.aria-invalid]="err(f.name().touched(), f.name().invalid())" />
         @if (err(f.name().touched(), f.name().invalid())) {
@@ -53,20 +53,13 @@ const EMPTY: TeamModel = { name: '', email: '', phone: '', role: 'staff' };
           <p class="banner banner--ok" role="status">{{ createdMsg() }}</p>
         }
 
-        <button type="submit" [disabled]="busy()">Create account</button>
+        <button type="submit" class="btn btn--primary" [disabled]="busy()">Create account</button>
       </form>
     </main>
   `,
   styles: `
-    .team { max-width: 26rem; margin: 2rem auto; display: flex; flex-direction: column; gap: 0.75rem; padding: 0 1rem; }
-    form { display: flex; flex-direction: column; gap: 0.5rem; }
-    label { font-weight: 600; }
-    input, select { padding: 0.6rem; font-size: 1rem; }
-    button { padding: 0.65rem; font-size: 1rem; cursor: pointer; }
-    .field-error { color: #b3261e; margin: 0; font-size: 0.85rem; }
-    .banner { padding: 0.6rem; border-radius: 0.25rem; margin: 0; }
-    .banner--error { background: #fce8e6; color: #b3261e; }
-    .banner--ok { background: #e6f4ea; color: #1e7e34; }
+    .team { max-width: 26rem; margin: var(--space-6) auto; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4); }
+    form { display: flex; flex-direction: column; gap: var(--space-2); }
   `,
 })
 export class TeamComponent {

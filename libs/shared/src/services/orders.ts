@@ -85,6 +85,27 @@ export function statusLabel(status: OrderStatus): string {
   return STATUS_LABELS[status];
 }
 
+/** Semantic tone for a status, so both apps colour-code the queue/list the same. */
+export type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+
+const STATUS_TONES: Record<OrderStatus, StatusTone> = {
+  requested: 'warning', // placed but not yet at the shop — needs staff action
+  received: 'neutral',
+  washing: 'info',
+  drying: 'info',
+  folding: 'info',
+  ready: 'success', // ready for the customer
+  for_delivery: 'info',
+  out_for_delivery: 'info',
+  picked_up: 'success',
+  completed: 'success',
+  cancelled: 'danger',
+};
+
+export function statusTone(status: OrderStatus): StatusTone {
+  return STATUS_TONES[status];
+}
+
 const LINEAR_NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
   requested: 'received',
   received: 'washing',

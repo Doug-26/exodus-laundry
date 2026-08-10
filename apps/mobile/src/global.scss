@@ -9,6 +9,9 @@
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
+/* Brand font — Inter (bundled via @fontsource-variable, works offline) */
+@import "@fontsource-variable/inter";
+
 /* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
 
@@ -48,4 +51,92 @@ body.map-open ion-content {
   --ion-background-color: transparent;
   --background: transparent;
   background: transparent !important;
+}
+
+/**
+ * Design-system utilities (Phase 6.5) — used across screens.
+ */
+
+/* Status chip: a small pill coloured by statusTone() (neutral/info/success/warning/danger). */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &.tone-neutral {
+    background: rgba(var(--ion-color-medium-rgb), 0.15);
+    color: var(--ion-color-medium-shade);
+  }
+  &.tone-info {
+    background: rgba(var(--ion-color-secondary-rgb), 0.16);
+    color: var(--ion-color-primary-shade);
+  }
+  &.tone-success {
+    background: rgba(var(--ion-color-success-rgb), 0.16);
+    color: var(--ion-color-success-shade);
+  }
+  &.tone-warning {
+    background: rgba(var(--ion-color-warning-rgb), 0.18);
+    color: var(--ion-color-warning-shade);
+  }
+  &.tone-danger {
+    background: rgba(var(--ion-color-danger-rgb), 0.16);
+    color: var(--ion-color-danger-shade);
+  }
+}
+
+/* Centered empty / loading state (icon + text + optional CTA). */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--app-space-3);
+  padding: var(--app-space-7) var(--app-space-4);
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    font-size: 3rem;
+    color: var(--ion-color-medium);
+    opacity: 0.7;
+  }
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--ion-text-color);
+  }
+  p {
+    margin: 0;
+    max-width: 22rem;
+  }
+}
+
+/* Page section heading above a card/list. */
+.section-title {
+  margin: var(--app-space-5) 0 var(--app-space-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ion-color-medium);
+}
+
+/* Brand wordmark in toolbars. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+
+  ion-icon {
+    color: var(--ion-color-primary);
+    font-size: 1.25rem;
+  }
 }

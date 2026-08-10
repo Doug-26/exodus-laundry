@@ -47,6 +47,7 @@ export {
   SERVICES,
   serviceLabel,
   statusLabel,
+  statusTone,
   dailyKey,
   formatClaimNumber,
   activeFor,
@@ -64,7 +65,7 @@ export {
   getOrder,
   subscribeOrder,
 } from './services/orders';
-export type { ServiceOption, CreateOrderInput } from './services/orders';
+export type { ServiceOption, CreateOrderInput, StatusTone } from './services/orders';
 
 // Config
 export { SHOP_LOCATION } from './config/shop';

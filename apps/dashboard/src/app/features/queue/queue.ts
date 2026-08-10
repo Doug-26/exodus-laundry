@@ -4,6 +4,7 @@ import {
   nextStatus,
   serviceLabel,
   statusLabel,
+  statusTone,
   type OrderStatus,
   type OrderWithId,
 } from '@exodus/shared';
@@ -27,10 +28,13 @@ const STATUS_OPTIONS: OrderStatus[] = [
   imports: [RouterLink],
   template: `
     <header class="bar">
-      <h1>Order Queue <span class="count">({{ store.activeCount() }})</span></h1>
+      <div class="title">
+        <span class="brand">Exodus Laundry</span>
+        <h1>Order Queue <span class="count">({{ store.activeCount() }})</span></h1>
+      </div>
       <div class="who">
         <span>{{ auth.profile()?.name }} ({{ auth.role() }})</span>
-        <button type="button" (click)="logout()">Sign out</button>
+        <button type="button" class="btn btn--ghost" (click)="logout()">Sign out</button>
       </div>
     </header>
 
@@ -39,7 +43,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
     }
 
     <div class="toolbar">
-      <a class="primary" routerLink="/orders/new">+ New Order</a>
+      <a class="btn btn--primary" routerLink="/orders/new">+ New Order</a>
       <label class="sr-only" for="search">Search</label>
       <input
         id="search"
@@ -56,85 +60,85 @@ const STATUS_OPTIONS: OrderStatus[] = [
         }
       </select>
       @if (auth.role() === 'admin') {
-        <a routerLink="/team">Team</a>
+        <a class="btn btn--ghost" routerLink="/team">Team</a>
       }
     </div>
 
-    @if (store.orders().length === 0) {
-      <p class="empty">No matching active orders.</p>
-    } @else {
-      <table>
-        <caption class="sr-only">Active orders</caption>
-        <thead>
-          <tr>
-            <th scope="col">Claim #</th>
-            <th scope="col">Customer</th>
-            <th scope="col">Service</th>
-            <th scope="col">Status</th>
-            <th scope="col">Price</th>
-            <th scope="col">Age</th>
-            <th scope="col">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (o of store.orders(); track o.id) {
+    <div class="content">
+      @if (store.orders().length === 0) {
+        <p class="empty">No matching active orders.</p>
+      } @else {
+        <table>
+          <caption class="sr-only">Active orders</caption>
+          <thead>
             <tr>
-              <td><a [routerLink]="['/orders', o.id]">{{ o.claimNumber }}</a></td>
-              <td>
-                {{ o.guestContact?.name }}
-                @if (o.source === 'app') {
-                  <span class="badge badge--app">App</span>
-                } @else if (o.customerId !== null) {
-                  <span class="badge">Linked</span>
-                } @else {
-                  <span class="badge badge--walkin">Walk-in</span>
-                }
-                @if (o.intakeMethod === 'pickup') {
-                  <span class="badge badge--pickup">Pickup</span>
-                }
-                <span class="phone">{{ o.guestContact?.phone }}</span>
-              </td>
-              <td>{{ serviceLabel(o.service) }}</td>
-              <td><span class="status">{{ statusLabel(o.status) }}</span></td>
-              <td>{{ o.price !== null ? '₱' + o.price : '—' }}</td>
-              <td>{{ age(o) }}</td>
-              <td class="action">
-                @if (advanceTarget(o); as t) {
-                  <button type="button" (click)="advance(o)">→ {{ statusLabel(t) }}</button>
-                } @else if (needsPickupChoice(o)) {
-                  <button type="button" (click)="choosePickup(o)">Set pickup</button>
-                } @else {
-                  <span class="done">{{ statusLabel(o.status) }}</span>
-                }
-              </td>
+              <th scope="col">Claim #</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Service</th>
+              <th scope="col">Status</th>
+              <th scope="col">Price</th>
+              <th scope="col">Age</th>
+              <th scope="col">Action</th>
             </tr>
-          }
-        </tbody>
-      </table>
-    }
+          </thead>
+          <tbody>
+            @for (o of store.orders(); track o.id) {
+              <tr>
+                <td><a [routerLink]="['/orders', o.id]">{{ o.claimNumber }}</a></td>
+                <td>
+                  {{ o.guestContact?.name }}
+                  @if (o.source === 'app') {
+                    <span class="badge badge--app">App</span>
+                  } @else if (o.customerId !== null) {
+                    <span class="badge badge--linked">Linked</span>
+                  } @else {
+                    <span class="badge badge--walkin">Walk-in</span>
+                  }
+                  @if (o.intakeMethod === 'pickup') {
+                    <span class="badge badge--pickup">Pickup</span>
+                  }
+                  <span class="phone">{{ o.guestContact?.phone }}</span>
+                </td>
+                <td>{{ serviceLabel(o.service) }}</td>
+                <td><span class="status tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span></td>
+                <td>{{ o.price !== null ? '₱' + o.price : '—' }}</td>
+                <td>{{ age(o) }}</td>
+                <td class="action">
+                  @if (advanceTarget(o); as t) {
+                    <button type="button" class="btn btn--primary" (click)="advance(o)">→ {{ statusLabel(t) }}</button>
+                  } @else if (needsPickupChoice(o)) {
+                    <button type="button" class="btn btn--ghost" (click)="choosePickup(o)">Set pickup</button>
+                  } @else {
+                    <span class="done">{{ statusLabel(o.status) }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
   `,
   styles: `
-    .bar { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #ddd; }
-    .count { color: #666; font-weight: 400; }
-    .who { display: flex; gap: 0.75rem; align-items: center; }
-    .toolbar { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; padding: 0.75rem 1rem; }
-    .toolbar input, .toolbar select { padding: 0.6rem; font-size: 1rem; }
+    .bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+    .title { display: flex; flex-direction: column; gap: 2px; }
+    .title h1 { margin: 0; font-size: 1.35rem; }
+    .brand { font-size: 0.78rem; font-weight: 800; letter-spacing: -0.01em; color: var(--color-primary); }
+    .count { color: var(--color-muted); font-weight: 400; }
+    .who { display: flex; gap: var(--space-3); align-items: center; color: var(--color-muted); }
+    .toolbar { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-5) 0; }
     .toolbar input { flex: 1 1 16rem; }
-    a.primary { background: #0b57d0; color: #fff; padding: 0.6rem 1rem; border-radius: 0.25rem; text-decoration: none; font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid #eee; }
-    .phone { display: block; color: #666; font-size: 0.85rem; }
-    .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
-    .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; margin-left: 0.25rem; }
-    .badge--app { background: #e8f0fe; color: #1967d2; }
-    .badge--pickup { background: #fef7e0; color: #b06000; }
-    .badge--walkin { background: #eceff1; color: #546e7a; }
-    .action button { padding: 0.55rem 0.9rem; font-size: 1rem; cursor: pointer; }
-    .done { color: #666; }
-    .empty { padding: 2rem 1rem; color: #666; }
-    .banner { margin: 0.75rem 1rem 0; padding: 0.6rem; border-radius: 0.25rem; }
-    .banner--ok { background: #e6f4ea; color: #1e7e34; }
-    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .content { padding: var(--space-4) var(--space-5) var(--space-6); }
+    table { width: 100%; border-collapse: collapse; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+    thead th { background: var(--color-bg); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-muted); }
+    th, td { text-align: left; padding: 0.7rem var(--space-4); border-bottom: 1px solid var(--color-border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--color-bg); }
+    .phone { display: block; color: var(--color-muted); font-size: 0.82rem; }
+    .action { text-align: right; }
+    .done { color: var(--color-muted); }
+    .empty { padding: var(--space-8) var(--space-5); color: var(--color-muted); text-align: center; }
+    .banner { margin: var(--space-3) var(--space-5) 0; }
   `,
 })
 export class QueueComponent {
@@ -145,6 +149,7 @@ export class QueueComponent {
 
   protected readonly serviceLabel = serviceLabel;
   protected readonly statusLabel = statusLabel;
+  protected readonly statusTone = statusTone;
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly created = signal<string | null>(null);
 

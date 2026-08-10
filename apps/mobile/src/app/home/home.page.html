@@ -1,6 +1,8 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>My Orders</ion-title>
+    <ion-title>
+      <span class="brand"><ion-icon name="sparkles-outline"></ion-icon> Exodus Laundry</span>
+    </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="logout()">Sign out</ion-button>
     </ion-buttons>
@@ -8,17 +10,28 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <ion-button expand="block" routerLink="/orders/new">+ New order</ion-button>
+  <ion-button expand="block" routerLink="/orders/new">
+    <ion-icon name="add-outline" slot="start"></ion-icon>
+    New order
+  </ion-button>
 
   @if (store.orders().length === 0) {
-    <p class="empty">No orders yet. Tap “New order” to place one.</p>
+    <div class="empty-state">
+      <ion-icon name="shirt-outline"></ion-icon>
+      <h2>No orders yet</h2>
+      <p>Tap “New order” to send your first laundry order.</p>
+    </div>
   } @else {
-    <ion-list>
+    <h2 class="section-title">Your orders</h2>
+    <ion-list lines="none" class="order-list">
       @for (o of store.orders(); track o.id) {
-        <ion-item button [routerLink]="['/orders', o.id]" detail="true">
+        <ion-item button [routerLink]="['/orders', o.id]" detail="true" class="order-card">
           <ion-label>
-            <h2>{{ o.claimNumber }} — {{ serviceLabel(o.service) }}</h2>
-            <p>{{ statusLabel(o.status) }}</p>
+            <div class="order-card__top">
+              <h2>{{ o.claimNumber }}</h2>
+              <span class="status-chip tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span>
+            </div>
+            <p>{{ serviceLabel(o.service) }}{{ o.price !== null ? ' · ₱' + o.price : '' }}</p>
           </ion-label>
           <ion-note slot="end">
             {{ o.createdAt ? (o.createdAt.toDate() | date: 'MMM d') : 'just now' }}

@@ -7,6 +7,7 @@ import {
   IonButtons,
   IonContent,
   IonHeader,
+  IonIcon,
   IonItem,
   IonList,
   IonRadio,
@@ -18,6 +19,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { bagAddOutline } from 'ionicons/icons';
 import { SERVICES, SHOP_LOCATION } from '@exodus/shared';
 import { AuthService } from '../../auth/auth.service';
 import { OrdersStore } from '../../orders/orders.store';
@@ -40,6 +43,7 @@ import { OrdersStore } from '../../orders/orders.store';
     IonSelectOption,
     IonTextarea,
     IonButton,
+    IonIcon,
     IonText,
   ],
   template: `
@@ -93,7 +97,10 @@ import { OrdersStore } from '../../orders/orders.store';
           <ion-text color="danger"><p role="alert">{{ error() }}</p></ion-text>
         }
 
-        <ion-button expand="block" type="submit" [disabled]="busy()">Place order</ion-button>
+        <ion-button expand="block" type="submit" [disabled]="busy()">
+          <ion-icon name="bag-add-outline" slot="start"></ion-icon>
+          Place order
+        </ion-button>
       </form>
     </ion-content>
   `,
@@ -113,6 +120,10 @@ export class NewOrderPage {
 
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
+
+  constructor() {
+    addIcons({ bagAddOutline });
+  }
 
   async submit(): Promise<void> {
     if (this.form.invalid) {

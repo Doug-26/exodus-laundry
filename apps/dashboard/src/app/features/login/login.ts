@@ -22,7 +22,7 @@ interface LoginModel {
         </p>
       }
 
-      <form (submit)="login($event)" novalidate>
+      <form class="card" (submit)="login($event)" novalidate>
         <label for="email">Email</label>
         <input
           id="email"
@@ -51,10 +51,10 @@ interface LoginModel {
           <p class="banner banner--error" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" [disabled]="busy()">Sign in</button>
+        <button type="submit" class="btn btn--primary" [disabled]="busy()">Sign in</button>
       </form>
 
-      <button type="button" class="google" (click)="google()" [disabled]="busy()">
+      <button type="button" class="btn btn--ghost" (click)="google()" [disabled]="busy()">
         Continue with Google
       </button>
 
@@ -67,16 +67,10 @@ interface LoginModel {
     </main>
   `,
   styles: `
-    .login { max-width: 22rem; margin: 4rem auto; display: flex; flex-direction: column; gap: 0.75rem; padding: 0 1rem; }
-    form { display: flex; flex-direction: column; gap: 0.5rem; }
-    label { font-weight: 600; }
-    input { padding: 0.6rem; font-size: 1rem; }
-    button { padding: 0.65rem; font-size: 1rem; cursor: pointer; }
-    .link { background: none; border: none; color: #0b57d0; text-decoration: underline; align-self: flex-start; padding: 0; }
-    .field-error { color: #b3261e; margin: 0; font-size: 0.85rem; }
-    .banner { padding: 0.6rem; border-radius: 0.25rem; margin: 0; }
-    .banner--error { background: #fce8e6; color: #b3261e; }
-    .banner--ok { background: #e6f4ea; color: #1e7e34; }
+    .login { max-width: 24rem; margin: 4rem auto; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4); }
+    .login h1 { text-align: center; color: var(--color-primary); }
+    form { display: flex; flex-direction: column; gap: var(--space-2); }
+    .link { background: none; border: none; color: var(--color-primary); text-decoration: underline; align-self: center; padding: 0; cursor: pointer; }
   `,
 })
 export class LoginComponent {

@@ -1,2 +1,78 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Exodus Laundry — design tokens (Phase 6.5).
+// "Fresh Teal/Cyan" palette mapped onto Ionic's colour system. Applies to light
+// and (via css/palettes/dark.system.css) dark mode. See also global.scss.
+
+:root {
+  // ── Brand: primary (teal) ───────────────────────────────────────────────
+  --ion-color-primary: #0e7490;
+  --ion-color-primary-rgb: 14, 116, 144;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0c657e;
+  --ion-color-primary-tint: #26829b;
+
+  // ── Accent: secondary (cyan) ────────────────────────────────────────────
+  --ion-color-secondary: #06b6d4;
+  --ion-color-secondary-rgb: 6, 182, 212;
+  --ion-color-secondary-contrast: #082f49;
+  --ion-color-secondary-contrast-rgb: 8, 47, 73;
+  --ion-color-secondary-shade: #05a0ba;
+  --ion-color-secondary-tint: #1fbdd7;
+
+  // ── Success (green) ─────────────────────────────────────────────────────
+  --ion-color-success: #059669;
+  --ion-color-success-rgb: 5, 150, 105;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #04845c;
+  --ion-color-success-tint: #1fa178;
+
+  // ── Warning (amber) ─────────────────────────────────────────────────────
+  --ion-color-warning: #d97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #bf6905;
+  --ion-color-warning-tint: #dd841f;
+
+  // ── Danger (red) ────────────────────────────────────────────────────────
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #c22222;
+  --ion-color-danger-tint: #e03c3c;
+
+  // ── Medium (slate neutral) ──────────────────────────────────────────────
+  --ion-color-medium: #64748b;
+  --ion-color-medium-rgb: 100, 116, 139;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #58647a;
+  --ion-color-medium-tint: #748097;
+
+  // ── Surfaces, text, typography ──────────────────────────────────────────
+  --ion-background-color: #f8fafc;
+  --ion-background-color-rgb: 248, 250, 252;
+  --ion-text-color: #0f172a;
+  --ion-text-color-rgb: 15, 23, 42;
+
+  --ion-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', roboto,
+    sans-serif;
+
+  // ── App-level tokens (used by component styles + global.scss) ───────────
+  --app-space-1: 4px;
+  --app-space-2: 8px;
+  --app-space-3: 12px;
+  --app-space-4: 16px;
+  --app-space-5: 24px;
+  --app-space-6: 32px;
+  --app-space-7: 48px;
+
+  --app-radius-sm: 6px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 16px;
+
+  --app-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.1);
+  --app-shadow-md: 0 4px 6px rgba(15, 23, 42, 0.05), 0 10px 15px rgba(15, 23, 42, 0.1);
+}

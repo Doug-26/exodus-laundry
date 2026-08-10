@@ -10,6 +10,7 @@ import {
   nextStatus,
   serviceLabel,
   setFulfilment,
+  statusTone,
   updateOrderDetails,
   updateOrderStatus,
   type CreateOrderInput,
@@ -94,6 +95,17 @@ describe('serviceLabel', () => {
   it('maps ids to labels and falls back to the id', () => {
     expect(serviceLabel('wash_fold')).toBe('Wash & Fold');
     expect(serviceLabel('unknown')).toBe('unknown');
+  });
+});
+
+describe('statusTone', () => {
+  it('maps statuses to semantic tones', () => {
+    expect(statusTone('ready')).toBe('success');
+    expect(statusTone('completed')).toBe('success');
+    expect(statusTone('cancelled')).toBe('danger');
+    expect(statusTone('requested')).toBe('warning');
+    expect(statusTone('for_delivery')).toBe('info');
+    expect(statusTone('received')).toBe('neutral');
   });
 });
 

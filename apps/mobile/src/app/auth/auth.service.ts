@@ -48,23 +48,38 @@ export class AuthService {
     onAuthChange(this.fb.auth, async (user) => {
       this._firebaseUser.set(user);
       if (user) {
+        let profile: User | null = null;
         try {
-          this._profile.set(await getUserProfile(this.fb.firestore, user.uid));
+          profile = await getUserProfile(this.fb.firestore, user.uid);
         } catch {
-          this._profile.set(null);
+          profile = null;
         }
+        this._profile.set(profile);
         this._status.set('authed');
         // Register this device for the "laundry is ready" push (native-only; idempotent).
         void this.push.connect(user.uid);
+        // Drive the order-list subscription from the definitive auth state (not a
+        // one-shot read on the page) so it survives sign-out → sign-in cycles.
+        this.syncOrderStore(user.uid, profile?.role ?? null);
       } else {
         this._profile.set(null);
         this._status.set('anon');
+        this.syncOrderStore(null, null);
       }
       if (!this.readyResolved) {
         this.readyResolved = true;
         this.resolveReady();
       }
     });
+  }
+
+  /** Connect the customer order store for customers; disconnect for anyone else. Idempotent. */
+  private syncOrderStore(uid: string | null, role: UserRole | null): void {
+    if (uid && role === 'customer') {
+      this.ordersStore.connect(uid);
+    } else {
+      this.ordersStore.disconnect();
+    }
   }
 
   async loginEmail(email: string, password: string): Promise<void> {
@@ -78,6 +93,8 @@ export class AuthService {
     } catch {
       this._profile.set(null);
     }
+    // Subscribe the order list eagerly (idempotent; onAuthChange also syncs).
+    this.syncOrderStore(cred.user.uid, this._profile()?.role ?? null);
   }
 
   /** Self-service registration. Always creates a customer. */
@@ -97,6 +114,8 @@ export class AuthService {
     }
     // onAuthChange fired before the profile existed; refresh it now.
     this._profile.set(await getUserProfile(this.fb.firestore, cred.user.uid));
+    // A signup is always a customer — subscribe the order list now.
+    this.syncOrderStore(cred.user.uid, 'customer');
 
     // Best-effort: attach any prior guest orders placed under this phone.
     // Never block or fail signup on this.

@@ -5,6 +5,7 @@ import {
   nextStatus,
   serviceLabel,
   statusLabel,
+  statusTone,
   type OrderStatus,
   type OrderWithId,
 } from '@exodus/shared';
@@ -14,98 +15,110 @@ import { OrdersStore } from '../../orders/orders.store';
   selector: 'app-order-detail',
   imports: [RouterLink, DatePipe],
   template: `
-    <main class="detail">
+    <main class="detail-page">
       <a routerLink="/">← Queue</a>
 
       @if (loading()) {
         <p>Loading…</p>
       } @else if (order(); as o) {
-        <h1>{{ o.claimNumber }}</h1>
-
-        <dl>
-          <dt>Customer</dt>
-          <dd>
-            {{ o.guestContact?.name }} — {{ o.guestContact?.phone }}
-            @if (o.source === 'app') {
-              <span class="badge badge--app">App</span>
-            } @else if (o.customerId !== null) {
-              <span class="badge">Linked</span>
-            } @else {
-              <span class="badge badge--walkin">Walk-in</span>
-            }
-          </dd>
-          <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
-          <dt>Weight</dt><dd>{{ o.weightKg !== null ? o.weightKg + ' kg' : '—' }}</dd>
-          <dt>Price</dt><dd>{{ o.price !== null ? '₱' + o.price : '—' }}</dd>
-          <dt>Notes</dt><dd>{{ o.notes || '—' }}</dd>
-          <dt>Status</dt><dd><span class="status">{{ statusLabel(o.status) }}</span></dd>
-          <dt>Intake</dt>
-          <dd>
-            @if (o.intakeMethod === 'pickup') {
-              Pickup requested — call the customer
-            } @else if (o.intakeMethod === 'dropoff') {
-              Drop-off (customer brings)
-            } @else {
-              Walk-in
-            }
-          </dd>
-          <dt>Fulfilment</dt><dd>{{ o.fulfilment ?? 'not chosen' }}</dd>
-        </dl>
-
-        <div class="actions">
-          @if (advanceTarget(o); as t) {
-            <button type="button" (click)="advance(o)">Advance → {{ statusLabel(t) }}</button>
-          } @else if (needsPickupChoice(o)) {
-            <button type="button" (click)="setPickup(o)">Set fulfilment: Pickup</button>
-          }
-          @if (o.active) {
-            <button type="button" class="danger" (click)="cancel(o)">Cancel order</button>
-          }
+        <div class="head">
+          <h1>{{ o.claimNumber }}</h1>
+          <span class="status tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span>
         </div>
 
-        <h2>Set weight &amp; price</h2>
-        <div class="edit">
-          <label for="ew">Weight (kg)</label>
-          <input id="ew" type="number" step="0.1" [value]="editWeight()" (input)="editWeight.set(val($event))" />
-          <label for="ep">Price (₱)</label>
-          <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event))" />
-          <label for="en">Notes</label>
-          <textarea id="en" rows="2" [value]="editNotes()" (input)="editNotes.set(val($event))"></textarea>
-          <button type="button" (click)="saveDetails(o.id)" [disabled]="savingDetails()">Save details</button>
-          @if (savedDetails()) {
-            <span class="saved" role="status">Saved.</span>
-          }
-        </div>
+        <div class="layout">
+          <div class="col-main">
+            <div class="card">
+              <dl>
+                <dt>Customer</dt>
+                <dd>
+                  {{ o.guestContact?.name }} — {{ o.guestContact?.phone }}
+                  @if (o.source === 'app') {
+                    <span class="badge badge--app">App</span>
+                  } @else if (o.customerId !== null) {
+                    <span class="badge badge--linked">Linked</span>
+                  } @else {
+                    <span class="badge badge--walkin">Walk-in</span>
+                  }
+                </dd>
+                <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
+                <dt>Weight</dt><dd>{{ o.weightKg !== null ? o.weightKg + ' kg' : '—' }}</dd>
+                <dt>Price</dt><dd>{{ o.price !== null ? '₱' + o.price : '—' }}</dd>
+                <dt>Notes</dt><dd>{{ o.notes || '—' }}</dd>
+                <dt>Intake</dt>
+                <dd>
+                  @if (o.intakeMethod === 'pickup') {
+                    Pickup requested — call the customer
+                  } @else if (o.intakeMethod === 'dropoff') {
+                    Drop-off (customer brings)
+                  } @else {
+                    Walk-in
+                  }
+                </dd>
+                <dt>Fulfilment</dt><dd>{{ o.fulfilment ?? 'not chosen' }}</dd>
+              </dl>
 
-        <h2>Status history</h2>
-        <ol class="history">
-          @for (h of o.statusHistory; track $index) {
-            <li>{{ statusLabel(h.status) }} — {{ h.at.toDate() | date: 'MMM d, h:mm a' }}</li>
-          }
-        </ol>
+              <div class="actions">
+                @if (advanceTarget(o); as t) {
+                  <button type="button" class="btn btn--primary" (click)="advance(o)">Advance → {{ statusLabel(t) }}</button>
+                } @else if (needsPickupChoice(o)) {
+                  <button type="button" class="btn btn--ghost" (click)="setPickup(o)">Set fulfilment: Pickup</button>
+                }
+                @if (o.active) {
+                  <button type="button" class="btn btn--danger" (click)="cancel(o)">Cancel order</button>
+                }
+              </div>
+            </div>
+
+            <h2>Set weight &amp; price</h2>
+            <div class="card edit">
+              <label for="ew">Weight (kg)</label>
+              <input id="ew" type="number" step="0.1" [value]="editWeight()" (input)="editWeight.set(val($event))" />
+              <label for="ep">Price (₱)</label>
+              <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event))" />
+              <label for="en">Notes</label>
+              <textarea id="en" rows="2" [value]="editNotes()" (input)="editNotes.set(val($event))"></textarea>
+              <div class="edit__save">
+                <button type="button" class="btn btn--primary" (click)="saveDetails(o.id)" [disabled]="savingDetails()">Save details</button>
+                @if (savedDetails()) {
+                  <span class="saved" role="status">Saved.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <aside class="col-side">
+            <h2>Status history</h2>
+            <ol class="card history">
+              @for (h of o.statusHistory; track $index) {
+                <li>{{ statusLabel(h.status) }} — {{ h.at.toDate() | date: 'MMM d, h:mm a' }}</li>
+              }
+            </ol>
+          </aside>
+        </div>
       } @else {
         <p role="alert">Order not found.</p>
       }
     </main>
   `,
   styles: `
-    .detail { max-width: 34rem; margin: 1.5rem auto; padding: 0 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-    dl { display: grid; grid-template-columns: 8rem 1fr; gap: 0.4rem 1rem; margin: 0; }
-    dt { font-weight: 600; }
+    .detail-page { max-width: 62rem; margin: var(--space-6) auto; padding: 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+    .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+    .head h1 { margin: 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: var(--space-5); align-items: start; }
+    .col-main { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+    .col-side { display: flex; flex-direction: column; gap: var(--space-3); }
+    .col-side h2 { margin: 0; }
+    dl { display: grid; grid-template-columns: 8rem 1fr; gap: 0.5rem 1rem; margin: 0; }
+    dt { font-weight: 600; color: var(--color-muted); }
     dd { margin: 0; }
-    .status { background: #eef; padding: 0.2rem 0.5rem; border-radius: 0.25rem; }
-    .badge { background: #e6f4ea; color: #1e7e34; font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 0.25rem; }
-    .badge--app { background: #e8f0fe; color: #1967d2; }
-    .badge--walkin { background: #eceff1; color: #546e7a; }
-    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0.5rem 0; }
-    .actions button { padding: 0.65rem 1rem; font-size: 1rem; cursor: pointer; }
-    .danger { color: #b3261e; }
-    .edit { display: flex; flex-direction: column; gap: 0.35rem; max-width: 16rem; }
-    .edit label { font-weight: 600; }
-    .edit input, .edit textarea { padding: 0.5rem; font-size: 1rem; }
-    .edit button { padding: 0.6rem; font-size: 1rem; cursor: pointer; margin-top: 0.25rem; }
-    .saved { color: #1e7e34; }
-    .history { color: #444; }
+    .actions { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-4); }
+    .edit { max-width: 18rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .edit__save { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
+    .saved { color: var(--color-success); }
+    .history { list-style: decimal inside; color: var(--color-muted); display: flex; flex-direction: column; gap: 0.35rem; }
+    .history li { margin: 0; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
   `,
 })
 export class OrderDetailComponent {
@@ -117,6 +130,7 @@ export class OrderDetailComponent {
   protected readonly loading = signal(true);
   protected readonly serviceLabel = serviceLabel;
   protected readonly statusLabel = statusLabel;
+  protected readonly statusTone = statusTone;
 
   // Edit fields (raw strings; prefilled once from the order so a live update mid-edit won't wipe typing).
   protected readonly editWeight = signal('');

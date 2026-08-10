@@ -6,6 +6,7 @@ import {
   IonButton,
   IonContent,
   IonHeader,
+  IonIcon,
   IonInput,
   IonItem,
   IonList,
@@ -14,6 +15,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { logInOutline, sparklesOutline } from 'ionicons/icons';
 import { AuthService } from '../../auth/auth.service';
 import { homeRouteForRole } from '../../auth/role-routes';
 
@@ -30,17 +33,24 @@ import { homeRouteForRole } from '../../auth/role-routes';
     IonItem,
     IonInput,
     IonButton,
+    IonIcon,
     IonNote,
     IonText,
   ],
   template: `
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-title>Sign in</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
+      <div class="auth-hero">
+        <ion-icon name="sparkles-outline"></ion-icon>
+        <h1>Exodus Laundry</h1>
+        <p>Fresh laundry, delivered.</p>
+      </div>
+
       @if (denied()) {
         <ion-text color="danger">
           <p role="alert">This account can’t use the app. Contact the shop.</p>
@@ -80,7 +90,10 @@ import { homeRouteForRole } from '../../auth/role-routes';
           <ion-text color="danger"><p role="alert">{{ error() }}</p></ion-text>
         }
 
-        <ion-button expand="block" type="submit" [disabled]="busy()">Sign in</ion-button>
+        <ion-button expand="block" type="submit" [disabled]="busy()">
+          <ion-icon name="log-in-outline" slot="start"></ion-icon>
+          Sign in
+        </ion-button>
       </form>
 
       <ion-button expand="block" fill="clear" routerLink="/signup" [disabled]="busy()">
@@ -88,6 +101,27 @@ import { homeRouteForRole } from '../../auth/role-routes';
       </ion-button>
     </ion-content>
   `,
+  styles: [
+    `
+      .auth-hero {
+        text-align: center;
+        margin: var(--app-space-5) 0 var(--app-space-6);
+      }
+      .auth-hero ion-icon {
+        font-size: 2.5rem;
+        color: var(--ion-color-primary);
+      }
+      .auth-hero h1 {
+        margin: var(--app-space-2) 0 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      .auth-hero p {
+        margin: 2px 0 0;
+        color: var(--ion-color-medium);
+      }
+    `,
+  ],
 })
 export class LoginPage {
   private readonly fb = inject(NonNullableFormBuilder);

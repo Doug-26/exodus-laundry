@@ -12,6 +12,7 @@ import {
   IonButton,
   IonContent,
   IonHeader,
+  IonIcon,
   IonInput,
   IonItem,
   IonList,
@@ -20,6 +21,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { personAddOutline, sparklesOutline } from 'ionicons/icons';
 import { PhoneTakenError, isValidPhPhone, toCanonical } from '@exodus/shared';
 import { AuthService } from '../../auth/auth.service';
 import { homeRouteForRole } from '../../auth/role-routes';
@@ -49,17 +52,24 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
     IonItem,
     IonInput,
     IonButton,
+    IonIcon,
     IonNote,
     IonText,
   ],
   template: `
-    <ion-header>
+    <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-title>Create account</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="ion-padding">
+      <div class="auth-hero">
+        <ion-icon name="sparkles-outline"></ion-icon>
+        <h1>Join Exodus Laundry</h1>
+        <p>Track orders and get delivery to your door.</p>
+      </div>
+
       <form [formGroup]="form" (ngSubmit)="submit()">
         <ion-list>
           <ion-item>
@@ -110,7 +120,10 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
           <ion-text color="danger"><p role="alert">{{ error() }}</p></ion-text>
         }
 
-        <ion-button expand="block" type="submit" [disabled]="busy()">Create account</ion-button>
+        <ion-button expand="block" type="submit" [disabled]="busy()">
+          <ion-icon name="person-add-outline" slot="start"></ion-icon>
+          Create account
+        </ion-button>
       </form>
 
       <ion-button expand="block" fill="clear" routerLink="/login" [disabled]="busy()">
@@ -118,6 +131,27 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
       </ion-button>
     </ion-content>
   `,
+  styles: [
+    `
+      .auth-hero {
+        text-align: center;
+        margin: var(--app-space-4) 0 var(--app-space-5);
+      }
+      .auth-hero ion-icon {
+        font-size: 2.5rem;
+        color: var(--ion-color-primary);
+      }
+      .auth-hero h1 {
+        margin: var(--app-space-2) 0 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+      .auth-hero p {
+        margin: 2px 0 0;
+        color: var(--ion-color-medium);
+      }
+    `,
+  ],
 })
 export class SignupPage {
   private readonly fb = inject(NonNullableFormBuilder);
@@ -133,6 +167,10 @@ export class SignupPage {
 
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
+
+  constructor() {
+    addIcons({ personAddOutline, sparklesOutline });
+  }
 
   private readonly phoneValue = toSignal(this.form.controls.phone.valueChanges, { initialValue: '' });
   protected readonly canonicalPreview = computed(() => {

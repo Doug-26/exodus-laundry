@@ -6,6 +6,7 @@ import {
   IonButtons,
   IonContent,
   IonHeader,
+  IonIcon,
   IonItem,
   IonLabel,
   IonList,
@@ -13,7 +14,9 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
-import { serviceLabel, statusLabel } from '@exodus/shared';
+import { addIcons } from 'ionicons';
+import { addOutline, shirtOutline, sparklesOutline } from 'ionicons/icons';
+import { serviceLabel, statusLabel, statusTone } from '@exodus/shared';
 import { AuthService } from '../auth/auth.service';
 import { OrdersStore } from '../orders/orders.store';
 
@@ -27,6 +30,7 @@ import { OrdersStore } from '../orders/orders.store';
     IonTitle,
     IonButton,
     IonButtons,
+    IonIcon,
     IonContent,
     IonList,
     IonItem,
@@ -43,8 +47,10 @@ export class HomePage {
 
   protected readonly serviceLabel = serviceLabel;
   protected readonly statusLabel = statusLabel;
+  protected readonly statusTone = statusTone;
 
   constructor() {
+    addIcons({ addOutline, shirtOutline, sparklesOutline });
     const uid = this.auth.firebaseUser()?.uid;
     if (uid) {
       this.store.connect(uid);

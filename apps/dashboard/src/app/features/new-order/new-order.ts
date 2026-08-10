@@ -33,7 +33,7 @@ type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
       <a routerLink="/">← Queue</a>
       <h1>New Order</h1>
 
-      <form (submit)="submit($event)" novalidate>
+      <form class="card" (submit)="submit($event)" novalidate>
         <label for="phone">Mobile number</label>
         <div class="phone-row">
           <input
@@ -45,7 +45,7 @@ type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
             (input)="onPhoneInput()"
             [attr.aria-invalid]="phoneError() !== null"
           />
-          <button type="button" (click)="lookupAccount()" [disabled]="lookupState() === 'busy'">
+          <button type="button" class="btn btn--ghost" (click)="lookupAccount()" [disabled]="lookupState() === 'busy'">
             {{ lookupState() === 'busy' ? 'Looking up…' : 'Look up account' }}
           </button>
         </div>
@@ -101,25 +101,18 @@ type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
           <p class="banner banner--error" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" [disabled]="busy()">Save order</button>
+        <button type="submit" class="btn btn--primary" [disabled]="busy()">Save order</button>
       </form>
     </main>
   `,
   styles: `
-    .intake { max-width: 30rem; margin: 1.5rem auto; display: flex; flex-direction: column; gap: 0.6rem; padding: 0 1rem; }
-    form { display: flex; flex-direction: column; gap: 0.5rem; }
-    label { font-weight: 600; }
-    input, select, textarea { padding: 0.6rem; font-size: 1rem; }
-    .phone-row { display: flex; gap: 0.5rem; }
+    .intake { max-width: 32rem; margin: var(--space-6) auto; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4); }
+    form { display: flex; flex-direction: column; gap: var(--space-2); }
+    .phone-row { display: flex; gap: var(--space-2); }
     .phone-row input { flex: 1; }
-    .phone-row button { padding: 0.6rem 0.9rem; cursor: pointer; white-space: nowrap; }
-    .readonly-name { display: block; padding: 0.6rem; background: #f2f2f2; border-radius: 0.25rem; }
-    button[type='submit'] { padding: 0.75rem; font-size: 1.05rem; cursor: pointer; margin-top: 0.5rem; }
-    .field-error { color: #b3261e; margin: 0; font-size: 0.85rem; }
-    .banner { padding: 0.6rem; border-radius: 0.25rem; margin: 0; }
-    .banner--error { background: #fce8e6; color: #b3261e; }
-    .banner--ok { background: #e6f4ea; color: #1e7e34; }
-    .banner--info { background: #eef; color: #33438a; }
+    .phone-row button { white-space: nowrap; }
+    .readonly-name { display: block; padding: 0.55rem 0.7rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+    button[type='submit'] { margin-top: var(--space-2); }
   `,
 })
 export class NewOrderComponent {
