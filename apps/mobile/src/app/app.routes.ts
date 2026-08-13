@@ -41,6 +41,13 @@ export const routes: Routes = [
       import('./features/order-detail/order-detail.page').then((m) => m.OrderDetailPage),
   },
   {
+    // Declared before 'rider' so the more specific route matches first.
+    path: 'rider/delivery/:id',
+    canActivate: [authGuard, customerRiderGuard],
+    loadComponent: () =>
+      import('./features/rider-delivery/rider-delivery.page').then((m) => m.RiderDeliveryPage),
+  },
+  {
     path: 'rider',
     canActivate: [authGuard, customerRiderGuard],
     loadComponent: () => import('./features/rider-home/rider-home.page').then((m) => m.RiderHomePage),

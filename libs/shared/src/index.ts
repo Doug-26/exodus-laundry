@@ -19,6 +19,8 @@ export type { RiderLocation } from './models/rider-location.model';
 
 // Utils
 export { toCanonical, isValidPhPhone } from './utils/phone';
+export { decodePolyline } from './utils/polyline';
+export type { LatLngPoint } from './utils/polyline';
 
 // Services
 export { initializeFirebase, getFirebaseServices } from './services/firebase';
@@ -62,6 +64,7 @@ export {
   linkGuestOrdersToCustomer,
   subscribeActiveOrders,
   subscribeCustomerOrders,
+  subscribeRiderOrders,
   getOrder,
   subscribeOrder,
 } from './services/orders';

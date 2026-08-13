@@ -364,6 +364,25 @@ export function subscribeCustomerOrders(
   });
 }
 
+/**
+ * Live subscription to the rider's world: every delivery that's out for delivery
+ * or waiting to be claimed. Single-field `in` on status → automatic index (no
+ * composite). The rider app filters `available` (for_delivery) vs `mine`
+ * (out_for_delivery assigned to this rider) client-side.
+ */
+export function subscribeRiderOrders(
+  firestore: Firestore,
+  cb: (orders: OrderWithId[]) => void,
+): Unsubscribe {
+  const q = query(
+    collection(firestore, 'orders'),
+    where('status', 'in', ['for_delivery', 'out_for_delivery']),
+  );
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) })));
+  });
+}
+
 export async function getOrder(firestore: Firestore, id: string): Promise<OrderWithId | null> {
   const snap = await getDoc(doc(firestore, 'orders', id));
   return snap.exists() ? { id: snap.id, ...(snap.data() as Order) } : null;

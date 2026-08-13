@@ -13,6 +13,7 @@ import {
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
 import { OrdersStore } from '../orders/orders.store';
+import { RiderOrdersStore } from '../orders/rider-orders.store';
 import { PushService } from '../push/push.service';
 
 export type AuthStatus = 'initializing' | 'authed' | 'anon';
@@ -28,6 +29,7 @@ export interface CustomerSignupInput {
 export class AuthService {
   private readonly fb = inject(FIREBASE);
   private readonly ordersStore = inject(OrdersStore);
+  private readonly riderStore = inject(RiderOrdersStore);
   private readonly push = inject(PushService);
 
   private readonly _firebaseUser = signal<FirebaseUser | null>(null);
@@ -73,12 +75,17 @@ export class AuthService {
     });
   }
 
-  /** Connect the customer order store for customers; disconnect for anyone else. Idempotent. */
+  /** Connect the store matching the signed-in role; disconnect the rest. Idempotent. */
   private syncOrderStore(uid: string | null, role: UserRole | null): void {
     if (uid && role === 'customer') {
       this.ordersStore.connect(uid);
+      this.riderStore.disconnect();
+    } else if (uid && role === 'rider') {
+      this.riderStore.connect(uid);
+      this.ordersStore.disconnect();
     } else {
       this.ordersStore.disconnect();
+      this.riderStore.disconnect();
     }
   }
 
@@ -126,6 +133,7 @@ export class AuthService {
 
   async logout(): Promise<void> {
     this.ordersStore.disconnect();
+    this.riderStore.disconnect();
     // Drop this device's push token while we still have the uid, then sign out.
     await this.push.disconnect();
     await signOutUser(this.fb.auth);

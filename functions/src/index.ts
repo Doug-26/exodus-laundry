@@ -11,3 +11,4 @@ import { initializeApp } from 'firebase-admin/app';
 initializeApp();
 
 export { onOrderReady } from './notifications/on-order-ready';
+export { startDelivery } from './deliveries/start-delivery';

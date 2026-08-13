@@ -376,6 +376,7 @@ Customer gives phone number → staff types it → [Next]
 **Goal:** rider sees route + ETA in-app; can launch external nav (§9).
 **Tasks:** rider delivery screen (shop + destination markers); one Routes API call on start → draw polyline + ETA, cache in `routeCache`; **Navigate** button → Google Maps/Waze; enforce compute-once.
 **Acceptance:** starting a delivery draws a single cached route + ETA (verify only one Routes call in logs); Navigate opens the external app to the correct destination.
+**MVP decisions (implemented):** rider **self-claims** a `for_delivery` order (no dashboard dispatch UI); the single Routes API call runs in the **`startDelivery` callable Cloud Function** with a server-side key (Functions secret `MAPS_ROUTES_KEY`), which atomically sets `assignedRiderId`, writes `routeCache`, and advances to `out_for_delivery`. Traffic-aware ETA. Rider marks delivered → `completed`. Live moving marker stays in Phase 8.
 
 ### Phase 8 — Live tracking
 **Goal:** customer watches the rider move (§11).
