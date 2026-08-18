@@ -20,7 +20,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { alertCircleOutline, navigateOutline, storefrontOutline } from 'ionicons/icons';
+import { alertCircleOutline, locateOutline, navigateOutline, storefrontOutline } from 'ionicons/icons';
 import { serviceLabel, statusLabel, statusTone, type OrderWithId } from '@exodus/shared';
 import { OrdersStore } from '../../orders/orders.store';
 
@@ -124,6 +124,12 @@ import { OrdersStore } from '../../orders/orders.store';
               @if (o.destination?.addressNote; as note) {
                 <p>{{ note }}</p>
               }
+              @if (o.status === 'out_for_delivery') {
+                <ion-button expand="block" (click)="track(o.id)">
+                  <ion-icon name="locate-outline" slot="start"></ion-icon>
+                  Track your delivery
+                </ion-button>
+              }
             </ion-card-content>
           </ion-card>
         }
@@ -215,7 +221,7 @@ export class OrderDetailPage {
   protected readonly statusTone = statusTone;
 
   constructor() {
-    addIcons({ alertCircleOutline, navigateOutline, storefrontOutline });
+    addIcons({ alertCircleOutline, locateOutline, navigateOutline, storefrontOutline });
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.loading.set(false);
@@ -231,6 +237,11 @@ export class OrderDetailPage {
   /** Open the full-screen delivery map/pin flow. */
   deliver(id: string): void {
     void this.router.navigate(['/orders', id, 'deliver']);
+  }
+
+  /** Open the live tracking map for an out-for-delivery order. */
+  track(id: string): void {
+    void this.router.navigate(['/orders', id, 'track']);
   }
 
   /** Confirm, then mark the order for shop pickup (stays 'ready'; staff complete it). */

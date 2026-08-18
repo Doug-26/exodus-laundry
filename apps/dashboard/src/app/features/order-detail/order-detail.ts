@@ -26,75 +26,73 @@ import { OrdersStore } from '../../orders/orders.store';
           <span class="status tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span>
         </div>
 
-        <div class="layout">
-          <div class="col-main">
-            <div class="card">
-              <dl>
-                <dt>Customer</dt>
-                <dd>
-                  {{ o.guestContact?.name }} — {{ o.guestContact?.phone }}
-                  @if (o.source === 'app') {
-                    <span class="badge badge--app">App</span>
-                  } @else if (o.customerId !== null) {
-                    <span class="badge badge--linked">Linked</span>
-                  } @else {
-                    <span class="badge badge--walkin">Walk-in</span>
-                  }
-                </dd>
-                <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
-                <dt>Weight</dt><dd>{{ o.weightKg !== null ? o.weightKg + ' kg' : '—' }}</dd>
-                <dt>Price</dt><dd>{{ o.price !== null ? '₱' + o.price : '—' }}</dd>
-                <dt>Notes</dt><dd>{{ o.notes || '—' }}</dd>
-                <dt>Intake</dt>
-                <dd>
-                  @if (o.intakeMethod === 'pickup') {
-                    Pickup requested — call the customer
-                  } @else if (o.intakeMethod === 'dropoff') {
-                    Drop-off (customer brings)
-                  } @else {
-                    Walk-in
-                  }
-                </dd>
-                <dt>Fulfilment</dt><dd>{{ o.fulfilment ?? 'not chosen' }}</dd>
-              </dl>
+        <div class="three-col">
+          <h2>Order details</h2>
+          <h2>Set weight &amp; price</h2>
+          <h2>Status history</h2>
 
-              <div class="actions">
-                @if (advanceTarget(o); as t) {
-                  <button type="button" class="btn btn--primary" (click)="advance(o)">Advance → {{ statusLabel(t) }}</button>
-                } @else if (needsPickupChoice(o)) {
-                  <button type="button" class="btn btn--ghost" (click)="setPickup(o)">Set fulfilment: Pickup</button>
+          <div class="card">
+            <dl>
+              <dt>Customer</dt>
+              <dd>
+                {{ o.guestContact?.name }} — {{ o.guestContact?.phone }}
+                @if (o.source === 'app') {
+                  <span class="badge badge--app">App</span>
+                } @else if (o.customerId !== null) {
+                  <span class="badge badge--linked">Linked</span>
+                } @else {
+                  <span class="badge badge--walkin">Walk-in</span>
                 }
-                @if (o.active) {
-                  <button type="button" class="btn btn--danger" (click)="cancel(o)">Cancel order</button>
+              </dd>
+              <dt>Service</dt><dd>{{ serviceLabel(o.service) }}</dd>
+              <dt>Weight</dt><dd>{{ o.weightKg !== null ? o.weightKg + ' kg' : '—' }}</dd>
+              <dt>Price</dt><dd>{{ o.price !== null ? '₱' + o.price : '—' }}</dd>
+              <dt>Notes</dt><dd>{{ o.notes || '—' }}</dd>
+              <dt>Intake</dt>
+              <dd>
+                @if (o.intakeMethod === 'pickup') {
+                  Pickup requested — call the customer
+                } @else if (o.intakeMethod === 'dropoff') {
+                  Drop-off (customer brings)
+                } @else {
+                  Walk-in
                 }
-              </div>
-            </div>
+              </dd>
+              <dt>Fulfilment</dt><dd>{{ o.fulfilment ?? 'not chosen' }}</dd>
+            </dl>
 
-            <h2>Set weight &amp; price</h2>
-            <div class="card edit">
-              <label for="ew">Weight (kg)</label>
-              <input id="ew" type="number" step="0.1" [value]="editWeight()" (input)="editWeight.set(val($event))" />
-              <label for="ep">Price (₱)</label>
-              <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event))" />
-              <label for="en">Notes</label>
-              <textarea id="en" rows="2" [value]="editNotes()" (input)="editNotes.set(val($event))"></textarea>
-              <div class="edit__save">
-                <button type="button" class="btn btn--primary" (click)="saveDetails(o.id)" [disabled]="savingDetails()">Save details</button>
-                @if (savedDetails()) {
-                  <span class="saved" role="status">Saved.</span>
-                }
-              </div>
+            <div class="actions">
+              @if (advanceTarget(o); as t) {
+                <button type="button" class="btn btn--primary" (click)="advance(o)">Advance → {{ statusLabel(t) }}</button>
+              } @else if (needsPickupChoice(o)) {
+                <button type="button" class="btn btn--ghost" (click)="setPickup(o)">Set fulfilment: Pickup</button>
+              }
+              @if (o.active) {
+                <button type="button" class="btn btn--danger" (click)="cancel(o)">Cancel order</button>
+              }
             </div>
           </div>
 
-          <aside class="col-side">
-            <h2>Status history</h2>
-            <ol class="card history">
-              @for (h of o.statusHistory; track $index) {
-                <li>{{ statusLabel(h.status) }} — {{ h.at.toDate() | date: 'MMM d, h:mm a' }}</li>
+          <div class="card edit">
+            <label for="ew">Weight (kg)</label>
+            <input id="ew" type="number" step="0.1" [value]="editWeight()" (input)="editWeight.set(val($event))" />
+            <label for="ep">Price (₱)</label>
+            <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event))" />
+            <label for="en">Notes</label>
+            <textarea id="en" rows="2" [value]="editNotes()" (input)="editNotes.set(val($event))"></textarea>
+            <div class="edit__save">
+              <button type="button" class="btn btn--primary" (click)="saveDetails(o.id)" [disabled]="savingDetails()">Save details</button>
+              @if (savedDetails()) {
+                <span class="saved" role="status">Saved.</span>
               }
-            </ol>
-          </aside>
+            </div>
+          </div>
+
+          <ol class="card history">
+            @for (h of o.statusHistory; track $index) {
+              <li>{{ statusLabel(h.status) }} — {{ h.at.toDate() | date: 'MMM d, h:mm a' }}</li>
+            }
+          </ol>
         </div>
       } @else {
         <p role="alert">Order not found.</p>
@@ -102,23 +100,32 @@ import { OrdersStore } from '../../orders/orders.store';
     </main>
   `,
   styles: `
-    .detail-page { max-width: 62rem; margin: var(--space-6) auto; padding: 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+    .detail-page { max-width: 78rem; margin: var(--space-6) auto; padding: 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
     .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
     .head h1 { margin: 0; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: var(--space-5); align-items: start; }
-    .col-main { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
-    .col-side { display: flex; flex-direction: column; gap: var(--space-3); }
-    .col-side h2 { margin: 0; }
+    /* Row 1 = headers (auto height), Row 2 = cards (fills remaining). All 3 card tops are guaranteed to align. */
+    .three-col { display: grid; grid-template-columns: minmax(0, 1fr) 18rem 21rem; grid-template-rows: auto 1fr; column-gap: var(--space-5); row-gap: var(--space-3); }
+    .three-col > h2 { margin: 0; }
+    .card { display: flex; flex-direction: column; }
     dl { display: grid; grid-template-columns: 8rem 1fr; gap: 0.5rem 1rem; margin: 0; }
     dt { font-weight: 600; color: var(--color-muted); }
     dd { margin: 0; }
-    .actions { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-4); }
-    .edit { max-width: 18rem; display: flex; flex-direction: column; gap: 0.4rem; }
-    .edit__save { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
+    .actions { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-top: auto; }
+    .edit { display: flex; flex-direction: column; gap: 0.4rem; }
+    .edit__save { display: flex; align-items: center; gap: var(--space-3); margin-top: auto; }
     .saved { color: var(--color-success); }
-    .history { list-style: decimal inside; color: var(--color-muted); display: flex; flex-direction: column; gap: 0.35rem; }
+    .history { list-style: decimal inside; color: var(--color-muted); display: flex; flex-direction: column; gap: 0.35rem; align-self: start; margin: 0; }
     .history li { margin: 0; }
-    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) {
+      .three-col { grid-template-columns: 1fr; grid-template-rows: none; }
+      .three-col > h2:nth-child(1) { order: 1; }
+      .three-col > .card:nth-child(4) { order: 2; }
+      .three-col > h2:nth-child(2) { order: 3; }
+      .three-col > .card:nth-child(5) { order: 4; }
+      .three-col > h2:nth-child(3) { order: 5; }
+      .three-col > .card:nth-child(6) { order: 6; }
+      .history { align-self: stretch; }
+    }
   `,
 })
 export class OrderDetailComponent {

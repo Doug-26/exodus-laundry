@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "deliveries": {
+      "$orderId": {
+        ".read": "auth != null && (auth.uid === data.child('meta/riderId').val() || auth.uid === data.child('meta/customerId').val())",
+        ".write": "auth != null && ((!data.exists() && newData.child('meta/riderId').val() === auth.uid) || data.child('meta/riderId').val() === auth.uid)"
+      }
+    }
+  }
+}

@@ -18,6 +18,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^firebase/firestore$': '<rootDir>/__mocks__/firebase-firestore.ts',
+    '^firebase/database$': '<rootDir>/__mocks__/firebase-database.ts',
     '^firebase/(.*)$': '<rootDir>/__mocks__/firebase.ts',
   },
 };

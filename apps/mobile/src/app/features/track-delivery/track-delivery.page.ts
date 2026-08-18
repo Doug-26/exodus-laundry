@@ -12,7 +12,6 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
@@ -23,30 +22,33 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { checkmarkDoneOutline, navigateOutline, playOutline } from 'ionicons/icons';
+import { checkmarkDoneOutline, locationOutline, navigateOutline } from 'ionicons/icons';
 import { GoogleMap } from '@capacitor/google-maps';
-import { decodePolyline, statusLabel, type OrderWithId } from '@exodus/shared';
+import {
+  decodePolyline,
+  subscribeRiderLocation,
+  type OrderWithId,
+  type RiderLocation,
+} from '@exodus/shared';
 import { environment } from '../../../environments/environment';
-import { RiderOrdersStore } from '../../orders/rider-orders.store';
-import { RiderTrackingService } from '../../tracking/rider-tracking.service';
+import { OrdersStore } from '../../orders/orders.store';
 import { markerIcon } from '../../tracking/marker-icon';
-import { AuthService } from '../../auth/auth.service';
+import { FIREBASE } from '../../firebase.providers';
 
 /**
- * Rider delivery map (§9). Shows shop + destination markers and — once the route
- * is computed by the startDelivery Cloud Function — the drawn polyline + ETA.
- * Start delivery / Navigate (handoff) / Mark delivered. Reuses the Phase 6
- * deliver-page map scaffold (transparency fix, GoogleMap lifecycle).
+ * Customer live-tracking map (§9, Phase 8). Shows the shop + destination markers,
+ * the cached route polyline + ETA, and the rider's marker moving in real time
+ * (streamed to Realtime Database by the rider's device). Reuses the rider-delivery
+ * map scaffold (transparency fix, GoogleMap lifecycle).
  */
 @Component({
-  selector: 'app-rider-delivery',
+  selector: 'app-track-delivery',
   imports: [
     IonHeader,
     IonToolbar,
     IonTitle,
     IonButtons,
     IonBackButton,
-    IonButton,
     IonIcon,
     IonContent,
     IonSpinner,
@@ -57,9 +59,9 @@ import { AuthService } from '../../auth/auth.service';
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/rider"></ion-back-button>
+          <ion-back-button [defaultHref]="backHref()"></ion-back-button>
         </ion-buttons>
-        <ion-title>Delivery</ion-title>
+        <ion-title>Track delivery</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -70,9 +72,6 @@ import { AuthService } from '../../auth/auth.service';
           <span class="eta">{{ eta }}</span>
         }
       </div>
-      @if (order()?.destination?.addressNote; as note) {
-        <p class="addr"><ion-icon name="navigate-outline"></ion-icon> {{ note }}</p>
-      }
 
       <!-- Always in the DOM so viewChild('map') resolves before the order loads. -->
       <div class="map-wrap"><capacitor-google-map #map></capacitor-google-map></div>
@@ -80,27 +79,24 @@ import { AuthService } from '../../auth/auth.service';
       @if (mapError()) {
         <ion-text color="danger"><p role="alert">The map couldn’t load. Check your connection.</p></ion-text>
       }
-      @if (error()) {
-        <ion-text color="danger"><p role="alert">{{ error() }}</p></ion-text>
-      }
 
       @if (order(); as o) {
-        @if (o.status === 'for_delivery') {
-          <ion-button expand="block" [disabled]="busy()" (click)="start()">
-            <ion-icon name="play-outline" slot="start"></ion-icon>
-            Start delivery
-          </ion-button>
-        } @else if (o.status === 'out_for_delivery') {
-          <ion-button expand="block" (click)="navigate()">
-            <ion-icon name="navigate-outline" slot="start"></ion-icon>
-            Navigate
-          </ion-button>
-          <ion-button expand="block" fill="outline" color="success" [disabled]="busy()" (click)="markDelivered()">
-            <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
-            Mark delivered
-          </ion-button>
+        @if (o.status === 'out_for_delivery') {
+          @if (riderLocation()) {
+            <p class="status-note on-the-way">
+              <ion-icon name="navigate-outline"></ion-icon> Your rider is on the way.
+            </p>
+          } @else {
+            <p class="status-note">
+              <ion-icon name="location-outline"></ion-icon> Waiting for the rider to start moving…
+            </p>
+          }
+        } @else if (o.status === 'completed') {
+          <p class="status-note done">
+            <ion-icon name="checkmark-done-outline"></ion-icon> Delivered — thanks!
+          </p>
         } @else {
-          <p class="done-note">This delivery is {{ statusLabel(o.status) }}.</p>
+          <p class="status-note">This order isn’t out for delivery yet.</p>
         }
       } @else if (loading()) {
         <div class="loading"><ion-spinner name="crescent"></ion-spinner></div>
@@ -144,34 +140,39 @@ import { AuthService } from '../../auth/auth.service';
         border-radius: 999px;
         white-space: nowrap;
       }
-      .addr {
+      .status-note {
         display: flex;
         align-items: center;
         gap: 6px;
         color: var(--ion-color-medium);
         margin: 4px 0 0;
       }
-      .addr ion-icon {
+      .status-note ion-icon {
         color: var(--ion-color-primary);
+        font-size: 1.15rem;
+      }
+      .status-note.on-the-way {
+        color: var(--ion-color-primary);
+        font-weight: 600;
+      }
+      .status-note.done {
+        color: var(--ion-color-success);
+        font-weight: 600;
+      }
+      .status-note.done ion-icon {
+        color: var(--ion-color-success);
       }
       .loading {
         display: flex;
         justify-content: center;
         padding: var(--app-space-7) 0;
       }
-      .done-note {
-        color: var(--ion-color-medium);
-      }
-      ion-button {
-        margin-top: var(--app-space-2);
-      }
     `,
   ],
 })
-export class RiderDeliveryPage implements AfterViewInit {
-  private readonly store = inject(RiderOrdersStore);
-  private readonly tracking = inject(RiderTrackingService);
-  private readonly auth = inject(AuthService);
+export class TrackDeliveryPage implements AfterViewInit {
+  private readonly store = inject(OrdersStore);
+  private readonly fb = inject(FIREBASE);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -179,11 +180,15 @@ export class RiderDeliveryPage implements AfterViewInit {
   private readonly mapEl = viewChild.required<ElementRef<HTMLElement>>('map');
 
   protected readonly order = signal<OrderWithId | null>(null);
+  protected readonly riderLocation = signal<RiderLocation | null>(null);
   protected readonly loading = signal(true);
   protected readonly mapError = signal(false);
-  protected readonly busy = signal(false);
-  protected readonly error = signal<string | null>(null);
-  protected readonly statusLabel = statusLabel;
+
+  private readonly orderId = this.route.snapshot.paramMap.get('id');
+
+  protected readonly backHref = computed(() =>
+    this.orderId ? `/orders/${this.orderId}` : '/home',
+  );
 
   protected readonly etaText = computed(() => {
     const s = this.order()?.routeCache?.etaSeconds;
@@ -193,26 +198,29 @@ export class RiderDeliveryPage implements AfterViewInit {
   private map?: GoogleMap;
   private markersAdded = false;
   private drawnRouteFor: string | null = null;
+  private riderMarkerId: string | null = null;
 
   constructor() {
-    addIcons({ checkmarkDoneOutline, navigateOutline, playOutline });
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) {
-      void this.router.navigateByUrl('/rider');
+    addIcons({ checkmarkDoneOutline, locationOutline, navigateOutline });
+    if (!this.orderId) {
+      void this.router.navigateByUrl('/home');
       return;
     }
     document.body.classList.add('map-open');
-    const unsub = this.store.watch(id, (o) => {
+
+    const unsubOrder = this.store.watch(this.orderId, (o) => {
       this.order.set(o);
       this.loading.set(false);
       void this.syncMap();
-      this.maybeTrack(o);
     });
+    const unsubRider = subscribeRiderLocation(this.fb.database, this.orderId, (loc) => {
+      this.riderLocation.set(loc);
+      void this.syncRiderMarker();
+    });
+
     this.destroyRef.onDestroy(() => {
-      unsub();
-      // Leaving the page mid-delivery: stop the watcher but keep the last position
-      // (the rider is still delivering). The node is only cleared on Mark delivered.
-      void this.tracking.stop(id, { clear: false });
+      unsubOrder();
+      unsubRider();
       void this.map?.destroy();
       document.body.classList.remove('map-open');
     });
@@ -221,21 +229,7 @@ export class RiderDeliveryPage implements AfterViewInit {
   async ngAfterViewInit(): Promise<void> {
     await this.createMap();
     await this.syncMap();
-  }
-
-  /** Begin streaming this rider's GPS once the delivery is theirs and out for delivery. */
-  private maybeTrack(o: OrderWithId | null): void {
-    const uid = this.auth.firebaseUser()?.uid;
-    if (
-      o &&
-      uid &&
-      o.status === 'out_for_delivery' &&
-      o.assignedRiderId === uid &&
-      o.customerId &&
-      !this.tracking.isTracking(o.id)
-    ) {
-      void this.tracking.start(o.id, uid, o.customerId);
-    }
+    await this.syncRiderMarker();
   }
 
   private async createMap(): Promise<void> {
@@ -250,7 +244,7 @@ export class RiderDeliveryPage implements AfterViewInit {
     const center = o?.destination ?? o?.shopLocation ?? { lat: 13.6218, lng: 123.1948 };
     try {
       this.map = await GoogleMap.create({
-        id: 'rider-map',
+        id: 'track-map',
         element: this.mapEl().nativeElement,
         apiKey: environment.googleMapsApiKey,
         config: { center: { lat: center.lat, lng: center.lng }, zoom: 13 },
@@ -260,7 +254,7 @@ export class RiderDeliveryPage implements AfterViewInit {
     }
   }
 
-  /** Draw the shop/destination markers + route once map + order are both ready (idempotent). */
+  /** Draw the shop/destination markers + cached route once map + order are ready (idempotent). */
   private async syncMap(): Promise<void> {
     const o = this.order();
     if (!this.map || !o) {
@@ -275,10 +269,9 @@ export class RiderDeliveryPage implements AfterViewInit {
       });
       await this.map.addMarker({
         coordinate: { lat: o.destination.lat, lng: o.destination.lng },
-        title: 'Customer',
+        title: 'Destination',
         ...markerIcon('destination'),
       });
-      // Frame both points.
       const mid = {
         lat: (o.shopLocation.lat + o.destination.lat) / 2,
         lng: (o.shopLocation.lng + o.destination.lng) / 2,
@@ -294,52 +287,21 @@ export class RiderDeliveryPage implements AfterViewInit {
     }
   }
 
-  async start(): Promise<void> {
-    const o = this.order();
-    if (!o) {
+  /** Move the rider marker to the latest streamed position (remove + re-add — no in-place move). */
+  private async syncRiderMarker(): Promise<void> {
+    const loc = this.riderLocation();
+    if (!this.map || !loc) {
       return;
     }
-    this.busy.set(true);
-    this.error.set(null);
-    try {
-      // The Cloud Function computes the route + flips status; the live snapshot
-      // then updates the order and syncMap() draws the polyline.
-      await this.store.startDelivery(o.id);
-    } catch {
-      this.error.set('Could not start the delivery. It may have just been taken — go back and refresh.');
-    } finally {
-      this.busy.set(false);
+    if (this.riderMarkerId !== null) {
+      await this.map.removeMarker(this.riderMarkerId);
+      this.riderMarkerId = null;
     }
-  }
-
-  /** Hand off to Google Maps for turn-by-turn (opens the external app). */
-  navigate(): void {
-    const d = this.order()?.destination;
-    if (!d) {
-      return;
-    }
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}&travelmode=driving`,
-      '_system',
-    );
-  }
-
-  async markDelivered(): Promise<void> {
-    const o = this.order();
-    if (!o) {
-      return;
-    }
-    this.busy.set(true);
-    this.error.set(null);
-    try {
-      await this.store.markDelivered(o);
-      // Delivery done: stop the GPS watcher and wipe the live-tracking node.
-      await this.tracking.stop(o.id, { clear: true });
-      await this.router.navigateByUrl('/rider');
-    } catch {
-      this.error.set('Could not mark delivered. Please try again.');
-    } finally {
-      this.busy.set(false);
-    }
+    this.riderMarkerId = await this.map.addMarker({
+      coordinate: { lat: loc.lat, lng: loc.lng },
+      title: 'Rider',
+      snippet: 'On the way',
+      ...markerIcon('rider'),
+    });
   }
 }

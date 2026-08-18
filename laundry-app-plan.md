@@ -383,6 +383,8 @@ Customer gives phone number → staff types it → [Next]
 **Tasks:** add `@capacitor-community/background-geolocation` to rider mode (apply Android background config, §12); rider streams position → RTDB; customer map subscribes + animates marker; refresh ETA on a slow timer; delete RTDB node on `completed`.
 **Acceptance:** with the rider phone **locked**, the customer still sees the marker move; completing the delivery removes the RTDB node.
 
+**MVP decisions (implemented):** rider streams GPS via `@capacitor-community/background-geolocation` (foreground-service, `distanceFilter: 20 m`) → RTDB `deliveries/{orderId}/riderLocation`; `ACCESS_BACKGROUND_LOCATION` added to the manifest (service/notification perms merged from the plugin). The rider seeds `deliveries/{orderId}/meta` (`{ riderId, customerId }`) which the **RTDB security rules** key off — read/write restricted to that delivery's rider + customer. Customer watches on a dedicated `/orders/:id/track` page (reuses the rider-delivery map scaffold: shop/destination markers, cached route polyline, moving rider marker). Node cleared on **Mark delivered**. ETA stays the Phase-7 cached value (slow-timer refresh deferred).
+
 ### Phase 9 — Hardening & release
 **Goal:** production-ready.
 **Tasks:** graceful permission-denial handling; Firestore security rules (customers own orders only; staff/admin per role incl. rate/report access; riders only assigned deliveries); Google Cloud budget alert; verify store permission strings; AXE/WCAG AA pass; TestFlight (iOS) + internal testing (Android) with a real rider on a real Naga route.
