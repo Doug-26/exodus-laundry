@@ -145,6 +145,16 @@ export class InvalidTransitionError extends Error {
   }
 }
 
+/**
+ * Staff workflow guard (§4.3): an order must be priced before it moves past
+ * intake. Advancing `requested → received` is allowed (that's the cue to open
+ * the order and price it); any advance beyond `received` is blocked while
+ * `price` is still null. Walk-ins are priced at intake so they're never blocked.
+ */
+export function needsPriceBeforeAdvance(order: Pick<Order, 'price' | 'status'>): boolean {
+  return order.price === null && order.status !== 'requested';
+}
+
 // ── Firestore operations ─────────────────────────────────────────────────────
 
 export interface CreateOrderInput {

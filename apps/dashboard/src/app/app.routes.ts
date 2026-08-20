@@ -28,5 +28,10 @@ export const routes: Routes = [
     canActivate: [authGuard, staffAdminGuard, adminGuard],
     loadComponent: () => import('./features/team/team').then((m) => m.TeamComponent),
   },
+  {
+    path: 'rates',
+    canActivate: [authGuard, staffAdminGuard, adminGuard],
+    loadComponent: () => import('./features/rates/rates').then((m) => m.RatesComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -72,6 +72,9 @@ beforeEach(async () => {
     );
     await setDoc(doc(db, 'orders', 'ord_fd'), baseOrder({ status: 'for_delivery', fulfilment: 'delivery' }));
     await setDoc(doc(db, 'counters', 'ctr'), { seq: 5 });
+    await setDoc(doc(db, 'rates', 'wash_fold'), {
+      service: 'wash_fold', baseKg: 5, baseAmount: 180, perKg: 40, active: true,
+    });
   });
 });
 
@@ -187,5 +190,17 @@ describe('phoneNumbers', () => {
   it('create own mapping; not for another uid; no update', async () => {
     await assertSucceeds(setDoc(doc(dbOf('pnu'), 'phoneNumbers', '+639171111111'), { uid: 'pnu' }));
     await assertFails(setDoc(doc(dbOf('pnu'), 'phoneNumbers', '+639172222222'), { uid: 'someoneElse' }));
+  });
+});
+
+describe('rates', () => {
+  const newRate = { service: 'wash_only', baseKg: 5, baseAmount: 160, perKg: 35, active: true };
+  it('staff can read; customer cannot', async () => {
+    await assertSucceeds(getDoc(doc(dbOf(STAFF), 'rates', 'wash_fold')));
+    await assertFails(getDoc(doc(dbOf(CUSTOMER), 'rates', 'wash_fold')));
+  });
+  it('only admin can write', async () => {
+    await assertSucceeds(setDoc(doc(dbOf(ADMIN), 'rates', 'wash_only'), newRate));
+    await assertFails(setDoc(doc(dbOf(STAFF), 'rates', 'dry_clean'), { ...newRate, service: 'dry_clean' }));
   });
 });

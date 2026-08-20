@@ -14,7 +14,7 @@ export type {
   RouteCache,
   StatusHistoryEntry,
 } from './models/order.model';
-export type { Rate, RateUnit } from './models/rate.model';
+export type { Rate } from './models/rate.model';
 export type { RiderLocation } from './models/rider-location.model';
 
 // Utils
@@ -54,6 +54,7 @@ export {
   formatClaimNumber,
   activeFor,
   nextStatus,
+  needsPriceBeforeAdvance,
   InvalidTransitionError,
   createOrder,
   updateOrderStatus,
@@ -75,6 +76,7 @@ export {
   clearDelivery,
 } from './services/tracking';
 export type { DeliveryMeta } from './services/tracking';
+export { computePrice, subscribeRates, getRates, upsertRate } from './services/rates';
 
 // Config
 export { SHOP_LOCATION } from './config/shop';

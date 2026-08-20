@@ -105,6 +105,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── rates (price list) ─────────────────────────────────────────────────
+    match /rates/{serviceId} {
+      // Staff need rates to auto-compute price at intake; only admins manage them.
+      allow read: if isStaff();
+      allow write: if roleIs('admin');
+    }
+
     // Deny everything else.
     match /{document=**} {
       allow read, write: if false;

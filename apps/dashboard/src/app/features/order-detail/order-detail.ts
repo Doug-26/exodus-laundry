@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
+  needsPriceBeforeAdvance,
   nextStatus,
   serviceLabel,
   statusLabel,
@@ -10,6 +11,7 @@ import {
   type OrderWithId,
 } from '@exodus/shared';
 import { OrdersStore } from '../../orders/orders.store';
+import { RatesStore } from '../../rates/rates.store';
 
 @Component({
   selector: 'app-order-detail',
@@ -63,7 +65,7 @@ import { OrdersStore } from '../../orders/orders.store';
 
             <div class="actions">
               @if (advanceTarget(o); as t) {
-                <button type="button" class="btn btn--primary" (click)="advance(o)">Advance → {{ statusLabel(t) }}</button>
+                <button type="button" class="btn btn--primary" (click)="advance(o)" [disabled]="needsPrice(o)">Advance → {{ statusLabel(t) }}</button>
               } @else if (needsPickupChoice(o)) {
                 <button type="button" class="btn btn--ghost" (click)="setPickup(o)">Set fulfilment: Pickup</button>
               }
@@ -71,13 +73,19 @@ import { OrdersStore } from '../../orders/orders.store';
                 <button type="button" class="btn btn--danger" (click)="cancel(o)">Cancel order</button>
               }
             </div>
+            @if (needsPrice(o)) {
+              <p class="need-price" role="status">Set a price and save before advancing this order.</p>
+            }
           </div>
 
           <div class="card edit">
             <label for="ew">Weight (kg)</label>
             <input id="ew" type="number" step="0.1" [value]="editWeight()" (input)="editWeight.set(val($event))" />
             <label for="ep">Price (₱)</label>
-            <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event))" />
+            <input id="ep" type="number" step="1" [value]="editPrice()" (input)="editPrice.set(val($event)); priceEdited.set(true)" />
+            @if (!priceEdited() && suggestedPrice() !== null) {
+              <p class="hint">Auto-filled from rate — adjust if needed.</p>
+            }
             <label for="en">Notes</label>
             <textarea id="en" rows="2" [value]="editNotes()" (input)="editNotes.set(val($event))"></textarea>
             <div class="edit__save">
@@ -114,6 +122,8 @@ import { OrdersStore } from '../../orders/orders.store';
     .edit { display: flex; flex-direction: column; gap: 0.4rem; }
     .edit__save { display: flex; align-items: center; gap: var(--space-3); margin-top: auto; }
     .saved { color: var(--color-success); }
+    .hint { color: var(--color-muted); font-size: 0.85rem; margin: 0; }
+    .need-price { color: var(--color-danger); font-size: 0.85rem; margin: 0.25rem 0 0; }
     .history { list-style: decimal inside; color: var(--color-muted); display: flex; flex-direction: column; gap: 0.35rem; align-self: start; margin: 0; }
     .history li { margin: 0; }
     @media (max-width: 900px) {
@@ -130,6 +140,7 @@ import { OrdersStore } from '../../orders/orders.store';
 })
 export class OrderDetailComponent {
   private readonly store = inject(OrdersStore);
+  private readonly rates = inject(RatesStore);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -147,7 +158,16 @@ export class OrderDetailComponent {
   protected readonly savedDetails = signal(false);
   private editInit = false;
 
+  /** True once the price is set (existing or hand-typed) — stops auto-fill overwriting it. */
+  protected readonly priceEdited = signal(false);
+  /** Suggested price from the order's service rate + the entered weight. */
+  protected readonly suggestedPrice = computed(() => {
+    const o = this.order();
+    return o ? this.rates.suggest(o.service, this.parseNum(this.editWeight())) : null;
+  });
+
   constructor() {
+    this.rates.connect();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.loading.set(false);
@@ -160,10 +180,25 @@ export class OrderDetailComponent {
         this.editWeight.set(o.weightKg?.toString() ?? '');
         this.editPrice.set(o.price?.toString() ?? '');
         this.editNotes.set(o.notes);
+        // An order that already has a price is treated as set — never auto-overwrite it.
+        this.priceEdited.set(o.price !== null);
         this.editInit = true;
       }
     });
     this.destroyRef.onDestroy(unsub);
+
+    // Auto-fill price from the rate when weight changes on an unpriced order.
+    effect(() => {
+      const suggestion = this.suggestedPrice();
+      untracked(() => {
+        if (suggestion !== null && !this.priceEdited()) {
+          const next = String(suggestion);
+          if (this.editPrice() !== next) {
+            this.editPrice.set(next);
+          }
+        }
+      });
+    });
   }
 
   protected val(event: Event): string {
@@ -202,7 +237,15 @@ export class OrderDetailComponent {
     return o.status === 'ready' && o.fulfilment === null;
   }
 
+  /** True when the order can't advance yet because it still needs a price. */
+  protected needsPrice(o: OrderWithId): boolean {
+    return needsPriceBeforeAdvance(o);
+  }
+
   protected advance(o: OrderWithId): void {
+    if (this.needsPrice(o)) {
+      return;
+    }
     void this.store.advance(o);
   }
 

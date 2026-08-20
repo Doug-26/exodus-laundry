@@ -6,6 +6,7 @@ import {
   dailyKey,
   formatClaimNumber,
   InvalidTransitionError,
+  needsPriceBeforeAdvance,
   nextStatus,
   serviceLabel,
   setFulfilment,
@@ -191,6 +192,20 @@ describe('updateOrderDetails', () => {
     expect(u.data['updatedAt']).toBeDefined();
     expect('notes' in u.data).toBe(false);
     expect('status' in u.data).toBe(false);
+  });
+});
+
+describe('needsPriceBeforeAdvance', () => {
+  it('allows requested → received without a price (the cue to go price it)', () => {
+    expect(needsPriceBeforeAdvance({ status: 'requested', price: null })).toBe(false);
+  });
+  it('blocks advancing past received while price is null', () => {
+    expect(needsPriceBeforeAdvance({ status: 'received', price: null })).toBe(true);
+    expect(needsPriceBeforeAdvance({ status: 'washing', price: null })).toBe(true);
+  });
+  it('allows advancing once a price is set (including 0)', () => {
+    expect(needsPriceBeforeAdvance({ status: 'received', price: 180 })).toBe(false);
+    expect(needsPriceBeforeAdvance({ status: 'received', price: 0 })).toBe(false);
   });
 });
 

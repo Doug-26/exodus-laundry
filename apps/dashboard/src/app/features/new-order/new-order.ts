@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormField, form, min, required } from '@angular/forms/signals';
-import { SERVICES, SHOP_LOCATION, isValidPhPhone, toCanonical } from '@exodus/shared';
+import { SERVICES, SHOP_LOCATION, isValidPhPhone, serviceLabel, toCanonical } from '@exodus/shared';
 import { AuthService } from '../../auth/auth.service';
 import { OrdersStore } from '../../orders/orders.store';
+import { RatesStore } from '../../rates/rates.store';
 
 interface NewOrderModel {
   name: string;
@@ -92,7 +93,10 @@ type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
         }
 
         <label for="price">Price (₱)</label>
-        <input id="price" type="number" step="1" [formField]="f.price" />
+        <input id="price" type="number" step="1" [formField]="f.price" (input)="priceEdited.set(true)" />
+        @if (!priceEdited() && suggestedPrice() !== null) {
+          <p class="hint">Auto-filled from the {{ serviceLabel(model().service) }} rate — adjust if needed.</p>
+        }
 
         <label for="notes">Notes (optional)</label>
         <textarea id="notes" rows="2" [formField]="f.notes"></textarea>
@@ -112,16 +116,26 @@ type LookupState = 'idle' | 'busy' | 'match' | 'nomatch';
     .phone-row input { flex: 1; }
     .phone-row button { white-space: nowrap; }
     .readonly-name { display: block; padding: 0.55rem 0.7rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+    .hint { color: var(--color-muted); font-size: 0.85rem; margin: 0; }
     button[type='submit'] { margin-top: var(--space-2); }
   `,
 })
 export class NewOrderComponent {
   private readonly auth = inject(AuthService);
   private readonly store = inject(OrdersStore);
+  private readonly rates = inject(RatesStore);
   private readonly router = inject(Router);
 
   protected readonly services = SERVICES;
+  protected readonly serviceLabel = serviceLabel;
   protected readonly model = signal<NewOrderModel>({ ...EMPTY });
+
+  /** True once staff types in the price field — stops auto-fill from overwriting it. */
+  protected readonly priceEdited = signal(false);
+  /** Suggested price from the active rate for the current service + weight. */
+  protected readonly suggestedPrice = computed(() =>
+    this.rates.suggest(this.model().service, this.model().weightKg > 0 ? this.model().weightKg : null),
+  );
   protected readonly f = form(this.model, (path) => {
     required(path.name, { message: 'Customer name is required' });
     required(path.phone, { message: 'Mobile number is required' });
@@ -137,6 +151,21 @@ export class NewOrderComponent {
   protected readonly lookupState = signal<LookupState>('idle');
   protected readonly matchedName = signal<string | null>(null);
   protected readonly linkedCustomerId = signal<string | null>(null);
+
+  constructor() {
+    this.rates.connect();
+    // Auto-fill the price from the rate whenever service/weight changes, unless
+    // staff has manually edited it. Guarded write (untracked + ref-equality) so
+    // it settles without looping.
+    effect(() => {
+      const suggestion = this.suggestedPrice();
+      untracked(() => {
+        if (suggestion !== null && !this.priceEdited()) {
+          this.model.update((m) => (m.price === suggestion ? m : { ...m, price: suggestion }));
+        }
+      });
+    });
+  }
 
   protected err(touched: boolean, invalid: boolean): boolean {
     return (touched || this.submitted()) && invalid;

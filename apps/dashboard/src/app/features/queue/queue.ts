@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  needsPriceBeforeAdvance,
   nextStatus,
   serviceLabel,
   statusLabel,
@@ -60,6 +61,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
         }
       </select>
       @if (auth.role() === 'admin') {
+        <a class="btn btn--ghost" routerLink="/rates">Rates</a>
         <a class="btn btn--ghost" routerLink="/team">Team</a>
       }
     </div>
@@ -105,7 +107,11 @@ const STATUS_OPTIONS: OrderStatus[] = [
                 <td>{{ age(o) }}</td>
                 <td class="action">
                   @if (advanceTarget(o); as t) {
-                    <button type="button" class="btn btn--primary" (click)="advance(o)">→ {{ statusLabel(t) }}</button>
+                    @if (needsPrice(o)) {
+                      <a class="btn btn--ghost" [routerLink]="['/orders', o.id]">Set price</a>
+                    } @else {
+                      <button type="button" class="btn btn--primary" (click)="advance(o)">→ {{ statusLabel(t) }}</button>
+                    }
                   } @else if (needsPickupChoice(o)) {
                     <button type="button" class="btn btn--ghost" (click)="choosePickup(o)">Set pickup</button>
                   } @else {
@@ -171,6 +177,11 @@ export class QueueComponent {
     return o.status === 'ready' && o.fulfilment === null;
   }
 
+  /** True when this order can't advance yet because it still needs a price. */
+  protected needsPrice(o: OrderWithId): boolean {
+    return needsPriceBeforeAdvance(o);
+  }
+
   protected age(o: OrderWithId): string {
     const ms = o.createdAt?.toMillis();
     if (!ms) {
@@ -196,6 +207,12 @@ export class QueueComponent {
   }
 
   protected advance(o: OrderWithId): void {
+    // Receiving a new order → mark received, then jump to its detail so staff
+    // can set the price (it can't advance further until they do).
+    if (o.status === 'requested') {
+      void this.store.advance(o).then(() => this.router.navigate(['/orders', o.id]));
+      return;
+    }
     void this.store.advance(o);
   }
 
