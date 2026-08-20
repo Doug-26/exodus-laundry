@@ -1,8 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   createUserProfile,
   getUserProfile,
-  linkGuestOrdersToCustomer,
   onAuthChange,
   signInWithEmail,
   signOutUser,
@@ -124,11 +124,11 @@ export class AuthService {
     // A signup is always a customer — subscribe the order list now.
     this.syncOrderStore(cred.user.uid, 'customer');
 
-    // Best-effort: attach any prior guest orders placed under this phone.
-    // Never block or fail signup on this.
-    void linkGuestOrdersToCustomer(this.fb.firestore, input.phoneRaw, cred.user.uid).catch(
-      () => undefined,
-    );
+    // Best-effort: attach any prior guest orders placed under this phone. Runs
+    // server-side (the function matches on the caller's own phone — the client
+    // never queries orders by phone). Never block or fail signup on this.
+    const linkFn = httpsCallable(getFunctions(this.fb.app, 'us-central1'), 'linkGuestOrders');
+    void linkFn({}).catch(() => undefined);
   }
 
   async logout(): Promise<void> {

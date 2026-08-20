@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { registerPlugin } from '@capacitor/core';
 import {
   seedDeliveryMeta,
@@ -28,6 +28,7 @@ interface BackgroundGeolocationPlugin {
     callback: (position?: BgLocation, error?: { code?: string; message: string }) => void,
   ): Promise<string>;
   removeWatcher(options: { id: string }): Promise<void>;
+  openSettings(): Promise<void>;
 }
 
 const BackgroundGeolocation =
@@ -49,9 +50,21 @@ export class RiderTrackingService {
   private trackingOrderId: string | null = null;
   private watcherId: string | null = null;
 
+  /**
+   * True when the OS denied location while trying to stream — the rider thinks
+   * they're sharing but they aren't. The delivery page surfaces this + an
+   * "Open settings" prompt. Cleared once a fix arrives.
+   */
+  readonly permissionDenied = signal(false);
+
   /** True while a watcher is streaming for the given order. */
   isTracking(orderId: string): boolean {
     return this.trackingOrderId === orderId && this.watcherId !== null;
+  }
+
+  /** Open the OS app-settings so the rider can grant "Allow all the time". */
+  openSettings(): Promise<void> {
+    return BackgroundGeolocation.openSettings();
   }
 
   /**
@@ -67,6 +80,7 @@ export class RiderTrackingService {
       await this.stop(this.trackingOrderId, { clear: false });
     }
     this.trackingOrderId = orderId;
+    this.permissionDenied.set(false);
 
     // Seed the meta node the RTDB rules key off before any location is written.
     await seedDeliveryMeta(this.fb.database, orderId, { riderId, customerId });
@@ -80,13 +94,23 @@ export class RiderTrackingService {
         distanceFilter: 20,
       },
       (position, error) => {
-        if (error || !position) {
+        if (error) {
+          // NOT_AUTHORIZED = the rider denied (background) location. Surface it so
+          // they don't believe they're sharing when they aren't.
+          if (error.code === 'NOT_AUTHORIZED') {
+            this.permissionDenied.set(true);
+          }
+          return;
+        }
+        if (!position) {
           return;
         }
         // Ignore late callbacks after the watcher was torn down.
         if (this.trackingOrderId !== orderId) {
           return;
         }
+        // A fix arrived → permission is fine; clear any stale denial flag.
+        this.permissionDenied.set(false);
         const loc: RiderLocation = {
           lat: position.latitude,
           lng: position.longitude,

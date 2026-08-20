@@ -71,7 +71,11 @@ interface LatLng {
       }
 
       <div class="map-wrap">
-        <capacitor-google-map #map></capacitor-google-map>
+        <capacitor-google-map
+          #map
+          role="application"
+          aria-label="Map for choosing your delivery address. Drag the pin to your location, or use the address note field below."
+        ></capacitor-google-map>
       </div>
 
       @if (mapError()) {

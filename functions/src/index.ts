@@ -12,3 +12,5 @@ initializeApp();
 
 export { onOrderReady } from './notifications/on-order-ready';
 export { startDelivery } from './deliveries/start-delivery';
+export { linkGuestOrders } from './users/link-guest-orders';
+export { createTeamMember } from './team/create-team-member';

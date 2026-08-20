@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -23,7 +24,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { checkmarkDoneOutline, navigateOutline, playOutline } from 'ionicons/icons';
+import { checkmarkDoneOutline, navigateOutline, playOutline, settingsOutline } from 'ionicons/icons';
 import { GoogleMap } from '@capacitor/google-maps';
 import { decodePolyline, statusLabel, type OrderWithId } from '@exodus/shared';
 import { environment } from '../../../environments/environment';
@@ -31,6 +32,9 @@ import { RiderOrdersStore } from '../../orders/rider-orders.store';
 import { RiderTrackingService } from '../../tracking/rider-tracking.service';
 import { markerIcon } from '../../tracking/marker-icon';
 import { AuthService } from '../../auth/auth.service';
+
+/** localStorage key: the rider agreed to the background-location disclosure (Play policy). */
+const BG_LOCATION_DISCLOSURE_KEY = 'exodus.bgLocationDisclosure';
 
 /**
  * Rider delivery map (§9). Shows shop + destination markers and — once the route
@@ -75,13 +79,28 @@ import { AuthService } from '../../auth/auth.service';
       }
 
       <!-- Always in the DOM so viewChild('map') resolves before the order loads. -->
-      <div class="map-wrap"><capacitor-google-map #map></capacitor-google-map></div>
+      <div class="map-wrap">
+        <capacitor-google-map
+          #map
+          role="img"
+          aria-label="Delivery route map showing the shop and the customer's location. The estimated arrival time is shown as text above the map and the address below it."
+        ></capacitor-google-map>
+      </div>
 
       @if (mapError()) {
         <ion-text color="danger"><p role="alert">The map couldn’t load. Check your connection.</p></ion-text>
       }
       @if (error()) {
         <ion-text color="danger"><p role="alert">{{ error() }}</p></ion-text>
+      }
+      @if (locationDenied()) {
+        <ion-text color="danger">
+          <p role="alert">Location is off — the customer can’t see where you are. Turn it on to share your location.</p>
+        </ion-text>
+        <ion-button expand="block" fill="outline" (click)="openLocationSettings()">
+          <ion-icon name="settings-outline" slot="start"></ion-icon>
+          Open location settings
+        </ion-button>
       }
 
       @if (order(); as o) {
@@ -172,6 +191,7 @@ export class RiderDeliveryPage implements AfterViewInit {
   private readonly store = inject(RiderOrdersStore);
   private readonly tracking = inject(RiderTrackingService);
   private readonly auth = inject(AuthService);
+  private readonly alerts = inject(AlertController);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -190,12 +210,18 @@ export class RiderDeliveryPage implements AfterViewInit {
     return s ? `~${Math.max(1, Math.round(s / 60))} min` : null;
   });
 
+  /** OS denied location while we're out for delivery — prompt the rider to fix it. */
+  protected readonly locationDenied = computed(
+    () => this.order()?.status === 'out_for_delivery' && this.tracking.permissionDenied(),
+  );
+
   private map?: GoogleMap;
   private markersAdded = false;
   private drawnRouteFor: string | null = null;
+  private startingTracking = false;
 
   constructor() {
-    addIcons({ checkmarkDoneOutline, navigateOutline, playOutline });
+    addIcons({ checkmarkDoneOutline, navigateOutline, playOutline, settingsOutline });
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       void this.router.navigateByUrl('/rider');
@@ -206,7 +232,7 @@ export class RiderDeliveryPage implements AfterViewInit {
       this.order.set(o);
       this.loading.set(false);
       void this.syncMap();
-      this.maybeTrack(o);
+      void this.maybeTrack(o);
     });
     this.destroyRef.onDestroy(() => {
       unsub();
@@ -224,18 +250,56 @@ export class RiderDeliveryPage implements AfterViewInit {
   }
 
   /** Begin streaming this rider's GPS once the delivery is theirs and out for delivery. */
-  private maybeTrack(o: OrderWithId | null): void {
+  private async maybeTrack(o: OrderWithId | null): Promise<void> {
     const uid = this.auth.firebaseUser()?.uid;
     if (
-      o &&
-      uid &&
-      o.status === 'out_for_delivery' &&
-      o.assignedRiderId === uid &&
-      o.customerId &&
-      !this.tracking.isTracking(o.id)
+      !o ||
+      !uid ||
+      o.status !== 'out_for_delivery' ||
+      o.assignedRiderId !== uid ||
+      !o.customerId ||
+      this.tracking.isTracking(o.id) ||
+      this.startingTracking
     ) {
-      void this.tracking.start(o.id, uid, o.customerId);
+      return;
     }
+    // Play policy: show a prominent disclosure BEFORE the OS background-location
+    // prompt (which fires inside tracking.start → addWatcher).
+    this.startingTracking = true;
+    try {
+      if (await this.ensureBgLocationDisclosure()) {
+        await this.tracking.start(o.id, uid, o.customerId);
+      }
+    } finally {
+      this.startingTracking = false;
+    }
+  }
+
+  /**
+   * Prominent background-location disclosure, shown once (persisted). Resolves
+   * true only if the rider agrees — the OS permission prompt follows.
+   */
+  private async ensureBgLocationDisclosure(): Promise<boolean> {
+    if (localStorage.getItem(BG_LOCATION_DISCLOSURE_KEY) === 'agreed') {
+      return true;
+    }
+    const alert = await this.alerts.create({
+      header: 'Share your delivery location?',
+      message:
+        'While you have an active delivery, Exodus shares your location in the background — even when the app is closed or not in use — so the customer can see your live position and ETA. Sharing stops the moment you mark the delivery delivered.',
+      backdropDismiss: false,
+      buttons: [
+        { text: 'Not now', role: 'cancel' },
+        { text: 'I agree', role: 'confirm' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role === 'confirm') {
+      localStorage.setItem(BG_LOCATION_DISCLOSURE_KEY, 'agreed');
+      return true;
+    }
+    return false;
   }
 
   private async createMap(): Promise<void> {
@@ -310,6 +374,10 @@ export class RiderDeliveryPage implements AfterViewInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  openLocationSettings(): void {
+    void this.tracking.openSettings();
   }
 
   /** Hand off to Google Maps for turn-by-turn (opens the external app). */

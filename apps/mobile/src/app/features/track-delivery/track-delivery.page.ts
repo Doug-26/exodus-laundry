@@ -74,7 +74,13 @@ import { FIREBASE } from '../../firebase.providers';
       </div>
 
       <!-- Always in the DOM so viewChild('map') resolves before the order loads. -->
-      <div class="map-wrap"><capacitor-google-map #map></capacitor-google-map></div>
+      <div class="map-wrap">
+        <capacitor-google-map
+          #map
+          role="img"
+          aria-label="Live delivery map showing the shop, your address, and the rider's current location. The estimated arrival time and status are shown as text above and below the map."
+        ></capacitor-google-map>
+      </div>
 
       @if (mapError()) {
         <ion-text color="danger"><p role="alert">The map couldn’t load. Check your connection.</p></ion-text>

@@ -1,8 +1,111 @@
 rules_version = '2';
+
+// Exodus Laundry — production security rules (Phase 9).
+// Roles live on users/{uid}.role: customer | rider | staff | admin.
+// Privileged writes that can't be verified client-side (guest-order linking,
+// staff/rider provisioning, delivery claim/route) run in Cloud Functions via the
+// Admin SDK, which bypasses these rules by design.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Phase 9: replace with production security rules.
-    // All access denied by default until rules are written.
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Role check, guarded so a missing user doc denies rather than errors.
+    function roleIs(r) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == r;
+    }
+    function isStaff() { return roleIs('staff') || roleIs('admin'); }
+    function isRider() { return roleIs('rider'); }
+
+    // ── users ──────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
+      // Self-signup only ever creates a customer. Staff/rider docs are written by
+      // the createTeamMember Cloud Function (Admin SDK).
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'customer';
+      // Owner may edit their profile (name, fcmTokens) but NOT their role.
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+    }
+
+    // ── phoneNumbers ({uid} lookup, canonical +639… key) ───────────────────
+    match /phoneNumbers/{phone} {
+      // Signed-in read: signup uniqueness pre-check + staff phone lookup.
+      allow read: if isSignedIn();
+      // Create own mapping once; immutable thereafter.
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── counters (daily claim sequence) ────────────────────────────────────
+    // Written by both staff walk-ins and customer app orders. Bound tampering by
+    // requiring a monotonic +1 (or 1 on the day's first order).
+    match /counters/{key} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.seq == 1;
+      allow update: if isSignedIn() && request.resource.data.seq == resource.data.seq + 1;
+      allow delete: if false;
+    }
+
+    // ── orders ─────────────────────────────────────────────────────────────
+    match /orders/{orderId} {
+      function isOrderCustomer() {
+        return isSignedIn() && resource.data.customerId == request.auth.uid;
+      }
+
+      // Customer confirms delivery (ready → for_delivery) or chooses pickup — own
+      // order only, and only the fulfilment-related fields may change.
+      function customerConfirmUpdate() {
+        return isOrderCustomer()
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['destination', 'fulfilment', 'status', 'active', 'updatedAt', 'statusHistory'])
+          && (
+            (resource.data.status == 'ready'
+              && request.resource.data.status == 'for_delivery'
+              && request.resource.data.fulfilment == 'delivery')
+            || (resource.data.status == 'ready'
+              && request.resource.data.status == 'ready'
+              && request.resource.data.fulfilment == 'pickup')
+          );
+      }
+
+      // Rider marks their assigned delivery completed (claim/route stay server-side).
+      function riderCompleteUpdate() {
+        return isRider()
+          && resource.data.assignedRiderId == request.auth.uid
+          && resource.data.status == 'out_for_delivery'
+          && request.resource.data.status == 'completed'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'active', 'updatedAt', 'statusHistory']);
+      }
+
+      allow read: if isStaff()
+        || isOrderCustomer()
+        || (isRider() && resource.data.status in ['for_delivery', 'out_for_delivery']);
+
+      // Staff create walk-ins; customers create their own app orders.
+      allow create: if isStaff()
+        || (isSignedIn()
+            && request.resource.data.source == 'app'
+            && request.resource.data.customerId == request.auth.uid
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.status == 'requested'
+            && request.resource.data.assignedRiderId == null);
+
+      allow update: if isStaff() || customerConfirmUpdate() || riderCompleteUpdate();
+      allow delete: if false;
+    }
+
+    // Deny everything else.
     match /{document=**} {
       allow read, write: if false;
     }

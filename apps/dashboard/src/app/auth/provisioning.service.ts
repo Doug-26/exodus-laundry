@@ -1,14 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { deleteApp, initializeApp } from 'firebase/app';
-import {
-  createUserWithEmailAndPassword,
-  inMemoryPersistence,
-  initializeAuth,
-  sendPasswordResetEmail,
-  signOut,
-} from 'firebase/auth';
-import { createUserProfile } from '@exodus/shared';
-import { environment } from '../../environments/environment';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { PhoneTakenError } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
 
 export interface ProvisionInput {
@@ -19,39 +12,38 @@ export interface ProvisionInput {
 }
 
 /**
- * Creates a staff/rider account WITHOUT disturbing the admin's own session.
- *
- * The Auth account is created on a throwaway secondary Firebase app (in-memory
- * persistence, deleted afterwards) so the primary/admin session is untouched.
- * The Firestore profile is written through the primary app. If the phone-uniqueness
- * transaction fails, the just-created Auth account is rolled back so no orphan remains.
- * The new user receives a password-reset email to set their own password.
+ * Creates a staff/rider account via the admin-gated `createTeamMember` Cloud
+ * Function (server-side, admin SDK) — so the Firestore rules can lock client
+ * self-signup to role:'customer' only. The function creates the Auth user +
+ * profile; we then send the built-in password-reset email so the new user sets
+ * their own password. The admin's own session is never touched.
  */
 @Injectable({ providedIn: 'root' })
 export class ProvisioningService {
   private readonly fb = inject(FIREBASE);
 
   async createStaffOrRider(input: ProvisionInput): Promise<void> {
-    const secondary = initializeApp(environment.firebase, `provisioning-${Date.now()}`);
-    const secondaryAuth = initializeAuth(secondary, { persistence: inMemoryPersistence });
+    const fn = httpsCallable(getFunctions(this.fb.app, 'us-central1'), 'createTeamMember');
     try {
-      const tempPassword = `${crypto.randomUUID()}Aa1!`;
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, input.email, tempPassword);
-      try {
-        await createUserProfile(this.fb.firestore, cred.user.uid, {
-          name: input.name,
-          phoneRaw: input.phoneRaw,
-          role: input.role,
-        });
-      } catch (err) {
-        // Roll back the Auth account so we never leave an orphan (and don't burn the email).
-        await cred.user.delete().catch(() => undefined);
-        throw err;
+      await fn({
+        name: input.name,
+        email: input.email,
+        phoneRaw: input.phoneRaw,
+        role: input.role,
+      });
+    } catch (err) {
+      // Map the callable's HttpsError messages back to the errors the team screen
+      // already handles, so its catch block stays unchanged.
+      const message = (err as { message?: string }).message;
+      if (message === 'phone-taken') {
+        throw new PhoneTakenError(input.phoneRaw);
       }
-      await sendPasswordResetEmail(secondaryAuth, input.email);
-    } finally {
-      await signOut(secondaryAuth).catch(() => undefined);
-      await deleteApp(secondary).catch(() => undefined);
+      if (message === 'email-taken') {
+        throw { code: 'auth/email-already-in-use' };
+      }
+      throw err;
     }
+    // Built-in reset email (works for any address; doesn't change our session).
+    await sendPasswordResetEmail(this.fb.auth, input.email);
   }
 }

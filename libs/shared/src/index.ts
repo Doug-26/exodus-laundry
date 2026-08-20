@@ -61,7 +61,6 @@ export {
   confirmDelivery,
   cancelOrder,
   updateOrderDetails,
-  linkGuestOrdersToCustomer,
   subscribeActiveOrders,
   subscribeCustomerOrders,
   subscribeRiderOrders,
