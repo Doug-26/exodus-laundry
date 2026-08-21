@@ -85,7 +85,7 @@ service cloud.firestore {
           && resource.data.status == 'out_for_delivery'
           && request.resource.data.status == 'completed'
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status', 'active', 'updatedAt', 'statusHistory']);
+               .hasOnly(['status', 'active', 'updatedAt', 'statusHistory', 'completedAt']);
       }
 
       allow read: if isStaff()

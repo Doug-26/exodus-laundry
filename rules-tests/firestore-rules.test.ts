@@ -160,10 +160,10 @@ describe('orders — customer update', () => {
 });
 
 describe('orders — rider update', () => {
-  it('assigned rider completes their delivery', async () => {
+  it('assigned rider completes their delivery (with completedAt)', async () => {
     await assertSucceeds(
       updateDoc(doc(dbOf(RIDER), 'orders', 'ord_ofd'), {
-        status: 'completed', active: false, updatedAt: new Date(),
+        status: 'completed', active: false, updatedAt: new Date(), completedAt: new Date(),
         statusHistory: [{ status: 'completed', at: new Date() }],
       }),
     );

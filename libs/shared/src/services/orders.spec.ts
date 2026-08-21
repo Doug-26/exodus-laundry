@@ -9,6 +9,7 @@ import {
   needsPriceBeforeAdvance,
   nextStatus,
   serviceLabel,
+  summarizeRevenue,
   setFulfilment,
   statusTone,
   updateOrderDetails,
@@ -192,6 +193,42 @@ describe('updateOrderDetails', () => {
     expect(u.data['updatedAt']).toBeDefined();
     expect('notes' in u.data).toBe(false);
     expect('status' in u.data).toBe(false);
+  });
+});
+
+describe('summarizeRevenue', () => {
+  type RevItem = Parameters<typeof summarizeRevenue>[0][number];
+  const o = (status: RevItem['status'], price: number | null, service: string): RevItem => ({
+    status,
+    price,
+    service,
+  });
+
+  it('sums only completed orders and breaks down by service', () => {
+    const s = summarizeRevenue([
+      o('completed', 180, 'wash_fold'),
+      o('completed', 260, 'wash_fold'),
+      o('completed', 250, 'comforter'),
+      o('cancelled', 999, 'wash_fold'), // ignored
+      o('washing', 500, 'wash_fold'), // ignored
+    ]);
+    expect(s.completedCount).toBe(3);
+    expect(s.totalRevenue).toBe(690);
+    expect(s.avg).toBe(230);
+    expect(s.byService['wash_fold']).toEqual({ count: 2, revenue: 440 });
+    expect(s.byService['comforter']).toEqual({ count: 1, revenue: 250 });
+  });
+
+  it('treats a null price as 0', () => {
+    const s = summarizeRevenue([o('completed', null, 'ironing')]);
+    expect(s.completedCount).toBe(1);
+    expect(s.totalRevenue).toBe(0);
+    expect(s.byService['ironing']).toEqual({ count: 1, revenue: 0 });
+  });
+
+  it('returns zeros for an empty set', () => {
+    const s = summarizeRevenue([]);
+    expect(s).toEqual({ completedCount: 0, totalRevenue: 0, avg: 0, byService: {} });
   });
 });
 

@@ -6,6 +6,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -226,6 +227,7 @@ export async function createOrder(
       routeCache: null,
       active: true,
       statusHistory: [{ status: initialStatus, at: Timestamp.now() }],
+      completedAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -250,12 +252,17 @@ export async function updateOrderStatus(
   if (target !== nextStatus(order.status, order.fulfilment)) {
     throw new InvalidTransitionError(order.status, target);
   }
-  await updateDoc(doc(firestore, 'orders', id), {
+  const base = {
     status: target,
     active: activeFor(target),
     updatedAt: serverTimestamp(),
     statusHistory: arrayUnion({ status: target, at: Timestamp.now() }),
-  });
+  };
+  // Stamp the completion time for revenue reports (Phase 11).
+  await updateDoc(
+    doc(firestore, 'orders', id),
+    target === 'completed' ? { ...base, completedAt: serverTimestamp() } : base,
+  );
 }
 
 export async function setFulfilment(
@@ -372,4 +379,59 @@ export function subscribeOrder(
   return onSnapshot(doc(firestore, 'orders', id), (snap) => {
     cb(snap.exists() ? { id: snap.id, ...(snap.data() as Order) } : null);
   });
+}
+
+// ── Revenue reports (Phase 11) ───────────────────────────────────────────────
+
+/**
+ * Orders completed within [startMs, endMs] (inclusive), by completedAt.
+ * Single-field range → automatic index. Orders without completedAt (not yet
+ * completed, or completed before the field existed) are naturally excluded.
+ */
+export async function getCompletedOrdersInRange(
+  firestore: Firestore,
+  startMs: number,
+  endMs: number,
+): Promise<OrderWithId[]> {
+  const q = query(
+    collection(firestore, 'orders'),
+    where('completedAt', '>=', Timestamp.fromMillis(startMs)),
+    where('completedAt', '<=', Timestamp.fromMillis(endMs)),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) }));
+}
+
+export interface RevenueSummary {
+  completedCount: number;
+  totalRevenue: number;
+  /** Mean revenue per completed order, rounded; 0 when no orders. */
+  avg: number;
+  byService: Record<string, { count: number; revenue: number }>;
+}
+
+/** Aggregate revenue from completed orders (pure — unit tested). Null prices count as 0. */
+export function summarizeRevenue(
+  orders: readonly Pick<Order, 'status' | 'price' | 'service'>[],
+): RevenueSummary {
+  let completedCount = 0;
+  let totalRevenue = 0;
+  const byService: Record<string, { count: number; revenue: number }> = {};
+  for (const o of orders) {
+    if (o.status !== 'completed') {
+      continue;
+    }
+    const price = o.price ?? 0;
+    completedCount += 1;
+    totalRevenue += price;
+    const bucket = (byService[o.service] ??= { count: 0, revenue: 0 });
+    bucket.count += 1;
+    bucket.revenue += price;
+  }
+  return {
+    completedCount,
+    totalRevenue,
+    avg: completedCount ? Math.round(totalRevenue / completedCount) : 0,
+    byService,
+  };
 }

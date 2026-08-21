@@ -61,6 +61,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
         }
       </select>
       @if (auth.role() === 'admin') {
+        <a class="btn btn--ghost" routerLink="/reports">Reports</a>
         <a class="btn btn--ghost" routerLink="/rates">Rates</a>
         <a class="btn btn--ghost" routerLink="/team">Team</a>
       }

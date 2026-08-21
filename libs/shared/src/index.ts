@@ -67,8 +67,10 @@ export {
   subscribeRiderOrders,
   getOrder,
   subscribeOrder,
+  getCompletedOrdersInRange,
+  summarizeRevenue,
 } from './services/orders';
-export type { ServiceOption, CreateOrderInput, StatusTone } from './services/orders';
+export type { ServiceOption, CreateOrderInput, StatusTone, RevenueSummary } from './services/orders';
 export {
   seedDeliveryMeta,
   writeRiderLocation,

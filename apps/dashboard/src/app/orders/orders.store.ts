@@ -2,11 +2,13 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import {
   cancelOrder,
   createOrder,
+  getCompletedOrdersInRange,
   lookupCustomerByPhone,
   nextStatus,
   setFulfilment,
   subscribeActiveOrders,
   subscribeOrder,
+  summarizeRevenue,
   updateOrderDetails,
   updateOrderStatus,
   type CreateOrderInput,
@@ -14,6 +16,7 @@ import {
   type Order,
   type OrderStatus,
   type OrderWithId,
+  type RevenueSummary,
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
 
@@ -92,5 +95,11 @@ export class OrdersStore {
 
   cancel(id: string): Promise<void> {
     return cancelOrder(this.fb.firestore, id);
+  }
+
+  /** Revenue summary for orders completed within [startMs, endMs] (admin reports). */
+  async revenueInRange(startMs: number, endMs: number): Promise<RevenueSummary> {
+    const orders = await getCompletedOrdersInRange(this.fb.firestore, startMs, endMs);
+    return summarizeRevenue(orders);
   }
 }

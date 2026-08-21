@@ -83,6 +83,9 @@ export interface Order {
   statusHistory: StatusHistoryEntry[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  /** Set when the order reaches 'completed' (Phase 11 revenue reports). Null until then;
+   *  absent on orders completed before this field existed. */
+  completedAt?: Timestamp | null;
 }
 
 /** An Order plus its Firestore document id (Order itself is stored without an id). */
