@@ -39,6 +39,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
       </div>
     </header>
 
+    <main>
     @if (created()) {
       <p class="banner banner--ok" role="status">Order {{ created() }} created.</p>
     }
@@ -125,6 +126,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
         </table>
       }
     </div>
+    </main>
   `,
   styles: `
     .bar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }

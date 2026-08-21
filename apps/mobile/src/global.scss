@@ -77,17 +77,19 @@ body.map-open ion-content {
     background: rgba(var(--ion-color-secondary-rgb), 0.16);
     color: var(--ion-color-primary-shade);
   }
+  /* Text darkened past the -shade tokens to meet WCAG AA (4.5:1) on the light
+     tint over the page background (Phase 9 a11y audit). */
   &.tone-success {
     background: rgba(var(--ion-color-success-rgb), 0.16);
-    color: var(--ion-color-success-shade);
+    color: #036b4a;
   }
   &.tone-warning {
     background: rgba(var(--ion-color-warning-rgb), 0.18);
-    color: var(--ion-color-warning-shade);
+    color: #8a4200;
   }
   &.tone-danger {
     background: rgba(var(--ion-color-danger-rgb), 0.16);
-    color: var(--ion-color-danger-shade);
+    color: #b91c1c;
   }
 }
 
