@@ -26,9 +26,23 @@ firestore-debug.log*
 database-debug.log*
 ui-debug.log*
 
-# ── Capacitor native projects (regenerated with `npx cap add`) ───────────────
-/apps/mobile/android/
+# ── Capacitor native projects ────────────────────────────────────────────────
+# android/ IS committed (CI builds the signed release APK from it). Build outputs,
+# local.properties, keystores and google-services.json are excluded by
+# apps/mobile/android/.gitignore. iOS isn't used in this project.
 /apps/mobile/ios/
+
+# ── Signing / service-account secrets — never commit ─────────────────────────
+*.jks
+*.keystore
+**/google-services.json
+**/GoogleService-Info.plist
+service-account*.json
+# Firebase service-account / admin-SDK private keys (never commit — use GitHub secrets)
+*-adminsdk-*.json
+*serviceAccount*.json
+# base64 secret dumps (keystore / google-services encodings)
+*.b64
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log

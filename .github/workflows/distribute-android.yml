@@ -1,0 +1,145 @@
+name: Distribute Android + Deploy Dashboard
+
+# Builds a signed release APK on every push to main and uploads it to Firebase
+# App Distribution, then deploys the dashboard to Firebase Hosting.
+# Auth uses a service account (not the deprecated FIREBASE_TOKEN).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Build + distribute Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write .env from secrets
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          cat > .env <<EOF
+          FIREBASE_API_KEY=$FIREBASE_API_KEY
+          FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          FIREBASE_APP_ID=$FIREBASE_APP_ID
+          FIREBASE_DATABASE_URL=$FIREBASE_DATABASE_URL
+          FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
+          GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+          EOF
+
+      - name: Restore google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          mkdir -p apps/mobile/android/app
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > apps/mobile/android/app/google-services.json
+
+      - name: Decode release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build web bundle
+        run: npm run build --workspace @exodus/mobile
+
+      - name: Capacitor sync
+        working-directory: apps/mobile
+        run: npx cap sync android
+
+      - name: Build signed release APK
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: ./gradlew assembleRelease
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: internal
+          file: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          releaseNotes: ${{ github.event.head_commit.message || 'Manual release' }}
+
+  dashboard:
+    name: Deploy dashboard hosting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write .env from secrets
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          cat > .env <<EOF
+          FIREBASE_API_KEY=$FIREBASE_API_KEY
+          FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+          FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+          FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+          FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+          FIREBASE_APP_ID=$FIREBASE_APP_ID
+          FIREBASE_DATABASE_URL=$FIREBASE_DATABASE_URL
+          FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
+          GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+          EOF
+
+      - name: Build dashboard
+        run: npm run build --workspace @exodus/dashboard
+
+      - name: Write service account file
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+
+      - name: Deploy to Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx firebase-tools deploy --only hosting:dashboard --project exodus-laundry --non-interactive
