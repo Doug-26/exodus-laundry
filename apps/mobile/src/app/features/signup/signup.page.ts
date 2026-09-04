@@ -22,7 +22,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { personAddOutline, sparklesOutline } from 'ionicons/icons';
+import { personAddOutline } from 'ionicons/icons';
 import { PhoneTakenError, isValidPhPhone, toCanonical } from '@exodus/shared';
 import { AuthService } from '../../auth/auth.service';
 import { homeRouteForRole } from '../../auth/role-routes';
@@ -65,7 +65,7 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
 
     <ion-content class="ion-padding">
       <div class="auth-hero">
-        <ion-icon name="sparkles-outline"></ion-icon>
+        <img src="assets/logo/logo-full.png" alt="" class="auth-logo" />
         <h1>Join Exodus Laundry</h1>
         <p>Track orders and get delivery to your door.</p>
       </div>
@@ -137,9 +137,11 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
         text-align: center;
         margin: var(--app-space-4) 0 var(--app-space-5);
       }
-      .auth-hero ion-icon {
-        font-size: 2.5rem;
-        color: var(--ion-color-primary);
+      .auth-hero .auth-logo {
+        display: block;
+        width: min(220px, 62%);
+        height: auto;
+        margin: 0 auto;
       }
       .auth-hero h1 {
         margin: var(--app-space-2) 0 0;
@@ -169,7 +171,7 @@ export class SignupPage {
   protected readonly busy = signal(false);
 
   constructor() {
-    addIcons({ personAddOutline, sparklesOutline });
+    addIcons({ personAddOutline });
   }
 
   private readonly phoneValue = toSignal(this.form.controls.phone.valueChanges, { initialValue: '' });

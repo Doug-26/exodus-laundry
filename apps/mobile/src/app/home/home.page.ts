@@ -15,7 +15,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { addOutline, shirtOutline, sparklesOutline } from 'ionicons/icons';
+import { addOutline, shirtOutline } from 'ionicons/icons';
 import { serviceLabel, statusLabel, statusTone } from '@exodus/shared';
 import { AuthService } from '../auth/auth.service';
 import { OrdersStore } from '../orders/orders.store';
@@ -50,7 +50,7 @@ export class HomePage {
   protected readonly statusTone = statusTone;
 
   constructor() {
-    addIcons({ addOutline, shirtOutline, sparklesOutline });
+    addIcons({ addOutline, shirtOutline });
     const uid = this.auth.firebaseUser()?.uid;
     if (uid) {
       this.store.connect(uid);

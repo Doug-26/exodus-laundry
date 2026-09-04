@@ -16,7 +16,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { logInOutline, sparklesOutline } from 'ionicons/icons';
+import { logInOutline } from 'ionicons/icons';
 import { AuthService } from '../../auth/auth.service';
 import { homeRouteForRole } from '../../auth/role-routes';
 
@@ -46,7 +46,7 @@ import { homeRouteForRole } from '../../auth/role-routes';
 
     <ion-content class="ion-padding">
       <div class="auth-hero">
-        <ion-icon name="sparkles-outline"></ion-icon>
+        <img src="assets/logo/logo-full.png" alt="" class="auth-logo" />
         <h1>Exodus Laundry</h1>
         <p>Fresh laundry, delivered.</p>
       </div>
@@ -107,9 +107,11 @@ import { homeRouteForRole } from '../../auth/role-routes';
         text-align: center;
         margin: var(--app-space-5) 0 var(--app-space-6);
       }
-      .auth-hero ion-icon {
-        font-size: 2.5rem;
-        color: var(--ion-color-primary);
+      .auth-hero .auth-logo {
+        display: block;
+        width: min(240px, 68%);
+        height: auto;
+        margin: 0 auto;
       }
       .auth-hero h1 {
         margin: var(--app-space-2) 0 0;
@@ -139,6 +141,7 @@ export class LoginPage {
   protected readonly denied = signal(false);
 
   constructor() {
+    addIcons({ logInOutline });
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.has('denied')) {
         this.denied.set(true);

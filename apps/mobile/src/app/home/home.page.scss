@@ -33,3 +33,16 @@
   margin: 0;
   color: var(--ion-color-medium);
 }
+
+/* Brand lockup in the header: the drum mark beside the shop name. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-mark {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
