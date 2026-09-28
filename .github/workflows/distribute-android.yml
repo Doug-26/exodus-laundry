@@ -26,6 +26,15 @@ jobs:
           java-version: 21
 
       - uses: android-actions/setup-android@v3
+        with:
+          # This action defaults to `packages: tools platform-tools`, but the
+          # legacy "tools" package was removed from cmdline-tools 16.x — which is
+          # what the action now installs — so the default fails with
+          # "Failed to find package 'tools'". Gradle pulls the platform and
+          # build-tools it needs itself once the licences are accepted.
+          packages: 'platform-tools'
+          # ~40KB of licence boilerplate per run otherwise, which buries real errors.
+          log-accepted-android-sdk-licenses: false
 
       - name: Install dependencies
         run: npm ci
