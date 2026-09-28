@@ -435,3 +435,24 @@ export function summarizeRevenue(
     byService,
   };
 }
+
+// ── Order history (Phase 12) ─────────────────────────────────────────────────
+
+/**
+ * All orders CREATED within [startMs, endMs] (inclusive), any status.
+ * Single-field range on createdAt → automatic index (no composite needed).
+ * The queue only shows active orders; this backs the staff/admin history view.
+ */
+export async function getOrdersInRange(
+  firestore: Firestore,
+  startMs: number,
+  endMs: number,
+): Promise<OrderWithId[]> {
+  const q = query(
+    collection(firestore, 'orders'),
+    where('createdAt', '>=', Timestamp.fromMillis(startMs)),
+    where('createdAt', '<=', Timestamp.fromMillis(endMs)),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) }));
+}

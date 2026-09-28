@@ -24,6 +24,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/order-detail/order-detail').then((m) => m.OrderDetailComponent),
   },
   {
+    // Staff-visible: the queue only lists active orders, this is the full record.
+    path: 'history',
+    canActivate: [authGuard, staffAdminGuard],
+    loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
+  },
+  {
     path: 'team',
     canActivate: [authGuard, staffAdminGuard, adminGuard],
     loadComponent: () => import('./features/team/team').then((m) => m.TeamComponent),

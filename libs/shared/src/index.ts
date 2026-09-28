@@ -68,6 +68,7 @@ export {
   getOrder,
   subscribeOrder,
   getCompletedOrdersInRange,
+  getOrdersInRange,
   summarizeRevenue,
 } from './services/orders';
 export type { ServiceOption, CreateOrderInput, StatusTone, RevenueSummary } from './services/orders';

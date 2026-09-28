@@ -10,6 +10,8 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  <h1 class="greeting">{{ greeting() }}</h1>
+
   <ion-button expand="block" routerLink="/orders/new">
     <ion-icon name="add-outline" slot="start"></ion-icon>
     New order
@@ -23,21 +25,63 @@
     </div>
   } @else {
     <h2 class="section-title">Your orders</h2>
-    <ion-list lines="none" class="order-list">
-      @for (o of store.orders(); track o.id) {
-        <ion-item button [routerLink]="['/orders', o.id]" detail="true" class="order-card">
-          <ion-label>
-            <div class="order-card__top">
-              <h2>{{ o.claimNumber }}</h2>
-              <span class="status-chip tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span>
-            </div>
-            <p>{{ serviceLabel(o.service) }}{{ o.price !== null ? ' · ₱' + o.price : '' }}</p>
-          </ion-label>
-          <ion-note slot="end">
-            {{ o.createdAt ? (o.createdAt.toDate() | date: 'MMM d') : 'just now' }}
-          </ion-note>
+
+    <ion-segment
+      class="range-filter"
+      [value]="range()"
+      (ionChange)="onRange($event)"
+      scrollable
+      aria-label="Filter orders by date"
+    >
+      <ion-segment-button value="all"><ion-label>All</ion-label></ion-segment-button>
+      <ion-segment-button value="today"><ion-label>Today</ion-label></ion-segment-button>
+      <ion-segment-button value="7d"><ion-label>7 days</ion-label></ion-segment-button>
+      <ion-segment-button value="month"><ion-label>Month</ion-label></ion-segment-button>
+      <ion-segment-button value="custom"><ion-label>Custom</ion-label></ion-segment-button>
+    </ion-segment>
+
+    @if (range() === 'custom') {
+      <ion-list lines="none" class="custom-range">
+        <ion-item>
+          <ion-input
+            label="From"
+            labelPlacement="stacked"
+            type="date"
+            [value]="customStart()"
+            (ionChange)="onCustomDate('start', $event)"
+          ></ion-input>
         </ion-item>
-      }
-    </ion-list>
+        <ion-item>
+          <ion-input
+            label="To"
+            labelPlacement="stacked"
+            type="date"
+            [value]="customEnd()"
+            (ionChange)="onCustomDate('end', $event)"
+          ></ion-input>
+        </ion-item>
+      </ion-list>
+    }
+
+    @if (filteredOrders().length === 0) {
+      <p class="no-match" role="status">No orders in this period.</p>
+    } @else {
+      <ion-list lines="none" class="order-list">
+        @for (o of filteredOrders(); track o.id) {
+          <ion-item button [routerLink]="['/orders', o.id]" detail="true" class="order-card">
+            <ion-label>
+              <div class="order-card__top">
+                <h2>{{ o.claimNumber }}</h2>
+                <span class="status-chip tone-{{ statusTone(o.status) }}">{{ statusLabel(o.status) }}</span>
+              </div>
+              <p>{{ serviceLabel(o.service) }}{{ o.price !== null ? ' · ₱' + o.price : '' }}</p>
+            </ion-label>
+            <ion-note slot="end">
+              {{ o.createdAt ? (o.createdAt.toDate() | date: 'MMM d') : 'just now' }}
+            </ion-note>
+          </ion-item>
+        }
+      </ion-list>
+    }
   }
 </ion-content>

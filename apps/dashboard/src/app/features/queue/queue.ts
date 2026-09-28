@@ -61,6 +61,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
           <option [value]="s">{{ statusLabel(s) }}</option>
         }
       </select>
+      <a class="btn btn--ghost" routerLink="/history">History</a>
       @if (auth.role() === 'admin') {
         <a class="btn btn--ghost" routerLink="/reports">Reports</a>
         <a class="btn btn--ghost" routerLink="/rates">Rates</a>

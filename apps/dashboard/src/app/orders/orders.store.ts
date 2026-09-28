@@ -3,6 +3,7 @@ import {
   cancelOrder,
   createOrder,
   getCompletedOrdersInRange,
+  getOrdersInRange,
   lookupCustomerByPhone,
   nextStatus,
   setFulfilment,
@@ -101,5 +102,10 @@ export class OrdersStore {
   async revenueInRange(startMs: number, endMs: number): Promise<RevenueSummary> {
     const orders = await getCompletedOrdersInRange(this.fb.firestore, startMs, endMs);
     return summarizeRevenue(orders);
+  }
+
+  /** Every order CREATED within [startMs, endMs], any status (order history). */
+  ordersInRange(startMs: number, endMs: number): Promise<OrderWithId[]> {
+    return getOrdersInRange(this.fb.firestore, startMs, endMs);
   }
 }

@@ -46,3 +46,26 @@
   height: 24px;
   flex-shrink: 0;
 }
+
+/* Personal greeting above the primary action. */
+.greeting {
+  margin: 0 0 var(--app-space-3);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Date presets for the order list (client-side filter over the live store). */
+.range-filter {
+  margin: var(--app-space-2) 0 var(--app-space-3);
+}
+
+.custom-range {
+  background: transparent;
+  margin-bottom: var(--app-space-2);
+}
+
+.no-match {
+  margin: var(--app-space-5) 0;
+  text-align: center;
+  color: var(--ion-color-medium);
+}

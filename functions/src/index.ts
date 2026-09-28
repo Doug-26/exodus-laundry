@@ -1,9 +1,13 @@
 /**
- * Cloud Functions — stubs to be implemented in Phase 5 (ready notification).
+ * Cloud Functions entry point — every deployed function is re-exported here.
  *
- * Phase 5: onOrderReady — triggered when orders/{orderId}.status transitions
- * to "ready"; sends FCM push to the linked customer's fcmTokens.
- * Guest orders (customerId === null) send nothing and do not error.
+ * onOrderReady      push when an order reaches "ready"
+ * onOrderCompleted  push when an order reaches "completed"
+ * startDelivery     rider self-claim + Google Routes lookup
+ * linkGuestOrders   retro-link guest orders to a new account
+ * createTeamMember  admin-gated staff/rider provisioning
+ *
+ * Guest orders (customerId === null) never push and never error.
  */
 
 import { initializeApp } from 'firebase-admin/app';
@@ -11,6 +15,7 @@ import { initializeApp } from 'firebase-admin/app';
 initializeApp();
 
 export { onOrderReady } from './notifications/on-order-ready';
+export { onOrderCompleted } from './notifications/on-order-completed';
 export { startDelivery } from './deliveries/start-delivery';
 export { linkGuestOrders } from './users/link-guest-orders';
 export { createTeamMember } from './team/create-team-member';
