@@ -1,9 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import {
+  IonAvatar,
   IonButton,
-  IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
@@ -35,7 +35,6 @@ type RangeKey = 'all' | 'today' | '7d' | 'month' | 'custom';
     IonToolbar,
     IonTitle,
     IonButton,
-    IonButtons,
     IonIcon,
     IonContent,
     IonList,
@@ -45,6 +44,7 @@ type RangeKey = 'all' | 'today' | '7d' | 'month' | 'custom';
     IonInput,
     IonSegment,
     IonSegmentButton,
+    IonAvatar,
   ],
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
@@ -52,7 +52,6 @@ type RangeKey = 'all' | 'today' | '7d' | 'month' | 'custom';
 export class HomePage {
   protected readonly auth = inject(AuthService);
   protected readonly store = inject(OrdersStore);
-  private readonly router = inject(Router);
 
   protected readonly serviceLabel = serviceLabel;
   protected readonly statusLabel = statusLabel;
@@ -67,6 +66,10 @@ export class HomePage {
     const first = this.auth.profile()?.name?.trim().split(/\s+/)[0];
     return first ? `Hi, ${first}` : 'Hi there';
   });
+  /** The saved profile picture, or the neutral placeholder when none is set. */
+  protected readonly avatarSrc = computed(
+    () => this.auth.profile()?.photoUrl ?? 'assets/logo/avatar-default.svg',
+  );
 
   /**
    * The store already holds every order for this customer (active + history), so
@@ -138,10 +141,5 @@ export class HomePage {
         ];
       }
     }
-  }
-
-  async logout(): Promise<void> {
-    await this.auth.logout();
-    await this.router.navigateByUrl('/login');
   }
 }

@@ -47,11 +47,35 @@
   flex-shrink: 0;
 }
 
-/* Personal greeting above the primary action. */
+/* Personal greeting above the primary action; the whole row opens Account. */
+.greeting-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  margin: 0 0 var(--app-space-4);
+  text-decoration: none;
+  color: inherit;
+}
+
+.greeting-avatar {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
 .greeting {
-  margin: 0 0 var(--app-space-3);
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
+  flex: 1;
+  min-width: 0;
+}
+
+.greeting-hint {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ion-color-primary);
 }
 
 /* Date presets for the order list (client-side filter over the live store). */

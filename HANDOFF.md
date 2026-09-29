@@ -32,13 +32,16 @@ Online payments (PayMongo) are a **future** phase.
 | `functions/` (`@exodus/functions`) | Firebase Cloud Functions **v2, Node 22** | Deployed |
 
 **Firebase** (project `exodus-laundry`, **Blaze** plan): Auth (email/password + Google),
-Firestore, Realtime Database (**asia-southeast1**), Cloud Functions, Hosting, App
-Distribution, FCM (push). Web SDK config comes from `.env` → generated `environment.ts`.
+Firestore, Realtime Database (**asia-southeast1**), **Cloud Storage** (bucket
+`exodus-laundry.firebasestorage.app` — the newer format, *not* `.appspot.com`), Cloud
+Functions, Hosting, App Distribution, FCM (push). Web SDK config comes from `.env` →
+generated `environment.ts`.
 
 **Roles** (`users/{uid}.role`): `customer`, `rider`, `staff`, `admin`.
 
-**Cloud Functions (deployed):** `onOrderReady` (push on →ready), `startDelivery` (rider
-self-claim + Routes API), `linkGuestOrders` (retro-link guest orders on signup),
+**Cloud Functions (deployed):** `onOrderReady` (push on →ready), `onOrderCompleted` (push
+on →completed, worded "Delivered!" vs "Order complete" by `fulfilment`), `startDelivery`
+(rider self-claim + Routes API), `linkGuestOrders` (retro-link guest orders on signup),
 `createTeamMember` (admin-gated staff/rider provisioning).
 
 ---
@@ -48,6 +51,8 @@ self-claim + Routes API), `linkGuestOrders` (retro-link guest orders on signup),
 **Firestore collections:** `orders`, `users`, `phoneNumbers` (`{phone}`→`{uid}`, canonical
 `+639…` key), `counters` (daily claim-number sequence), `rates` (`{serviceId}` → price).
 **Realtime DB:** `deliveries/{orderId}` = `{ meta: {riderId, customerId}, riderLocation: {lat,lng,heading,timestamp} }`.
+**Cloud Storage:** `avatars/{uid}/avatar.jpg` — one fixed object per customer, overwritten
+on change (no orphans, trivial rules). `User.photoUrl` holds its download URL.
 
 **Order state machine** (`libs/shared/src/services/orders.ts` `nextStatus`):
 ```
@@ -58,7 +63,10 @@ requested → received → washing → drying → folding → ready
 ```
 - `source`: `walk_in` (staff intake) | `app` (customer). App orders start at `requested`,
   walk-ins at `received`.
-- `fulfilment` chosen at `ready`: `pickup` | `delivery`.
+- `fulfilment` — **outbound**, chosen at `ready`: `pickup` | `delivery`.
+- `intakeMethod` — **inbound**, chosen at app-order creation: `dropoff` (customer brings it)
+  | `pickup` (shop collects) | `null` for walk-ins. Distinct from `fulfilment`; the dashboard
+  shows a "Pickup" badge for it.
 - `completedAt` timestamp set when reaching `completed` (revenue reports).
 - Price rule: **cannot advance past `received` without a price** (`needsPriceBeforeAdvance`).
 
@@ -82,9 +90,11 @@ Exodus wash&fold = 5kg / ₱180 base / ₱40 per kg above.
 | **6.5 UI Foundation** | Fresh Teal/Cyan design tokens + Inter font, `statusTone`, mobile Ionic theme + dashboard `styles.scss` |
 | **7 Rider Route + ETA** | `startDelivery` callable (Google Routes API, server-key secret), rider self-claim, polyline + ETA map, Navigate handoff, Mark delivered |
 | **8 Live Tracking** | `@capacitor-community/background-geolocation` streams rider GPS → RTDB; customer `/orders/:id/track` live map; scoped RTDB rules; distinct map markers |
-| **9 Hardening** | Least-privilege **Firestore rules** (+ `npm run test:rules`, 20 tests); `linkGuestOrders` + `createTeamMember` callables replace insecure client paths; permission-denial UX; Play bg-location disclosure + `privacy.html`; **WCAG AA contrast** fixes |
+| **9 Hardening** | Least-privilege **Firestore rules** (+ `npm run test:rules`); `linkGuestOrders` + `createTeamMember` callables replace insecure client paths; permission-denial UX; Play bg-location disclosure + `privacy.html`; **WCAG AA contrast** fixes |
 | **10 Rate Pricing** | `rates` collection + admin `/rates` screen; base+overage `computePrice`; auto-fill price at intake + order-detail (editable); price-gate before advancing |
 | **11 Revenue Reports** | `Order.completedAt`; `getCompletedOrdersInRange` + `summarizeRevenue`; admin `/reports` (Today/7d/month/custom, by service) |
+| **12 Quick Wins** | Mobile name greeting + client-side date filter on the order list (All/Today/7d/Month/custom, no extra reads); `onOrderCompleted` push; dashboard **Order History** `/history` (all orders in a created-date range, any status — `staffAdminGuard`, so staff see it too) |
+| **13 Storage + Avatar** | Cloud Storage enabled + `storage.rules` (owner writes own avatar); `storage` on shared `FirebaseServices`; `uploadAvatar`; `User.photoUrl`; `@capacitor/camera`; mobile **Account** screen (avatar, name, read-only phone, sign out); avatar in the home greeting. Also clamped the `users/{uid}` update rule — see §6 |
 | **CI/CD** | GitHub Actions: signed release APK → Firebase App Distribution + dashboard hosting deploy on push to `main` |
 
 Detailed per-phase notes were kept in Claude memory (account-local); this file + git
@@ -133,12 +143,28 @@ Distribution (group `internal`), and deploys the dashboard to Hosting. Auth via 
   `{serviceId}` etc.
 - Firestore rules are **least-privilege and deployed**; RTDB rules scope `deliveries/{id}`
   to the delivery's rider + customer via `meta`.
+- **`users/{uid}` update is clamped** to `hasOnly(['name','fcmTokens','photoUrl'])` (Phase 13).
+  Before that it allowed any field but `role`, so a client could rewrite their own `phone` —
+  which permanently desyncs the **immutable** `phoneNumbers/{phone}` index that guest-order
+  linking matches on. Phone corrections must go through staff/Admin SDK.
+- **Storage rules cannot read Firestore**, so `roleIs()`/`isStaff()` are *not* portable to
+  `storage.rules` — it gates by path ownership only (`request.auth.uid == uid`), plus a 2MB
+  and `image/*` cap. Role-gated Storage needs the **custom claims** in Phase 14.
 
 ---
 
 ## 7. Conventions & gotchas
 
-- **Windows dev machine**, PowerShell + Git Bash. Firebase CLI 15.6, Java 21, Node 22.
+- **Windows dev machine**, PowerShell + Git Bash. Firebase CLI 15.x, Java 21, Node 22.
+- **JDK on a fresh machine:** Capacitor 8 needs **JDK 21**. Android Studio ships one at
+  `C:\Program Files\Android\Android Studio\jbr`; point the *user* `JAVA_HOME` there. A
+  machine-level `JAVA_HOME`/PATH pointing at a newer JDK can stay — Gradle reads `JAVA_HOME`
+  first, so a bare `java -version` may report a different version and that's fine. The
+  Firestore/Storage emulators run on newer JDKs too.
+- **CI gotcha (fixed):** `android-actions/setup-android@v3` defaults to
+  `packages: tools platform-tools`, but the obsolete `tools` package no longer exists in
+  cmdline-tools 16.x — the workflow pins `packages: 'platform-tools'`. It also sets
+  `log-accepted-android-sdk-licenses: false`, otherwise ~40KB of licence text buries real errors.
 - **Functions deploy on Windows** may need `FUNCTIONS_DISCOVERY_TIMEOUT=120`.
 - **Android device** for testing (`adb`), id `AE6RUT4816000657` — the USB link **drops
   intermittently**; use `adb reconnect` / `adb reconnect offline`, then `adb install -r`.
@@ -170,7 +196,7 @@ npm run config
 
 # tests
 npm run test:shared        # jest (libs/shared)
-npm run test:rules         # Firestore rules emulator (needs Java + firebase CLI)
+npm run test:rules         # Firestore + Storage rules emulators (needs Java + firebase CLI)
 
 # seed scripts (sign in with an admin account)
 npm run seed:admin -- <email> <password> "<Full Name>" <phone>
@@ -187,6 +213,7 @@ adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 # deploys (locally, already logged in via `firebase login`)
 firebase deploy --only firestore:rules
 firebase deploy --only database          # RTDB rules
+firebase deploy --only storage           # Cloud Storage rules
 firebase deploy --only hosting:dashboard
 FUNCTIONS_DISCOVERY_TIMEOUT=120 firebase deploy --only functions
 ```
@@ -201,23 +228,8 @@ Payments (PayMongo) is **parked** as the last phase. Before it, the user request
 additions, sequenced so each foundation lands just before it's needed. **Decisions already
 made are noted.**
 
-### Phase 12 — Quick wins (no new infrastructure)
-- **Mobile:** name greeting on home ("Hi, {{name}}" — text only; avatar comes in P13).
-- **Mobile:** date filter on the order list (presets Today/7d/Month + custom, like Reports).
-- **Cloud Function `onOrderCompleted`** (mirror `onOrderReady`): push when status →
-  `completed`; auto-word "Delivered!" (delivery) vs "Completed" (pickup).
-- **Dashboard:** Order History page `/history` (adminGuard or staffAdmin) — **all orders in
-  a date range, any status, by created date** (decision), links to detail. The queue only
-  shows active orders.
-
-### Phase 13 — Firebase Storage + customer profile picture
-- **Foundation:** enable **Firebase Storage**; add `getStorage` + upload helper to shared
-  `FirebaseServices`; `storage.rules` (owner writes own avatar); add **`@capacitor/camera`**
-  for mobile capture/upload.
-- **Mobile Account screen** (name, phone, sign out) + **avatar upload/capture**; add
-  `User.photoUrl`.
-- **Mobile home greeting** shows the avatar (**default image if none**).
-- *(Decision: greeting = name + avatar; Account screen has take/upload picture.)*
+> Phases 12 and 13 are **done** — see §4. Phase 13 laid the Storage foundation Phase 14
+> builds on, so the remaining phases stay in this order.
 
 ### Phase 14 — Proof photos
 - **Foundation: role custom claims** — set a `role` claim (in `createTeamMember`, on login

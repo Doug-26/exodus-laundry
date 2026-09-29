@@ -23,6 +23,11 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home.page').then((m) => m.HomePage),
   },
   {
+    path: 'account',
+    canActivate: [authGuard, customerGuard],
+    loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
+  },
+  {
     // Declared before 'orders/:id' (first-match router).
     path: 'orders/new',
     canActivate: [authGuard, customerGuard],

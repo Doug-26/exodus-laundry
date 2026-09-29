@@ -75,6 +75,32 @@ export class AuthService {
     });
   }
 
+  /**
+   * Re-read users/{uid} into the profile signal.
+   *
+   * The profile is a one-shot read, not an onSnapshot subscription, so anything
+   * that edits it (the Account screen) must call this for derived UI — the home
+   * greeting, the avatar — to update.
+   *
+   * On failure the previous profile is deliberately kept rather than nulled:
+   * a null role makes customerGuard sign the user out, so a transient read error
+   * must not eject them.
+   */
+  async refreshProfile(): Promise<void> {
+    const uid = this._firebaseUser()?.uid;
+    if (!uid) {
+      return;
+    }
+    try {
+      const profile = await getUserProfile(this.fb.firestore, uid);
+      if (profile) {
+        this._profile.set(profile);
+      }
+    } catch {
+      // Keep the last known profile.
+    }
+  }
+
   /** Connect the store matching the signed-in role; disconnect the rest. Idempotent. */
   private syncOrderStore(uid: string | null, role: UserRole | null): void {
     if (uid && role === 'customer') {

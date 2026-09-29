@@ -106,6 +106,42 @@ export async function lookupCustomerByPhone(
   return { uid: match.uid, name: profile.name };
 }
 
+/** The only profile fields a client may change (see firestore.rules users/{uid}). */
+export interface UserProfilePatch {
+  name?: string;
+  photoUrl?: string;
+}
+
+/**
+ * Update the caller's own profile.
+ *
+ * Only name and photoUrl are writable. `phone` is deliberately excluded: the
+ * phoneNumbers/{phone} index is write-once by rule, so changing user.phone would
+ * permanently desync the lookup that guest-order linking depends on. `role` is
+ * server-owned. Firestore rules enforce both independently of this function.
+ *
+ * Each branch passes an object literal to updateDoc rather than a built-up
+ * Record — ts-jest rejects the latter even where the Angular build accepts it.
+ */
+export async function updateUserProfile(
+  firestore: Firestore,
+  uid: string,
+  patch: UserProfilePatch,
+): Promise<void> {
+  const userRef = doc(firestore, 'users', uid);
+  if (patch.name !== undefined && patch.photoUrl !== undefined) {
+    await updateDoc(userRef, { name: patch.name, photoUrl: patch.photoUrl });
+    return;
+  }
+  if (patch.name !== undefined) {
+    await updateDoc(userRef, { name: patch.name });
+    return;
+  }
+  if (patch.photoUrl !== undefined) {
+    await updateDoc(userRef, { photoUrl: patch.photoUrl });
+  }
+}
+
 /**
  * Register a device's FCM token on the customer's profile (idempotent —
  * arrayUnion won't duplicate). Called after login once push registration

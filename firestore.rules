@@ -29,10 +29,14 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && request.resource.data.role == 'customer';
-      // Owner may edit their profile (name, fcmTokens) but NOT their role.
+      // Owner may edit only name, fcmTokens and photoUrl — never their role, and
+      // never phone: phoneNumbers/{phone} is write-once below, so a phone edit
+      // here would permanently desync the lookup guest-order linking relies on.
       allow update: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.role == resource.data.role;
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'fcmTokens', 'photoUrl']);
       allow delete: if false;
     }
 

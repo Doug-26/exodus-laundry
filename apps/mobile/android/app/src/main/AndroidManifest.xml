@@ -54,4 +54,10 @@
          permissions are merged from @capacitor-community/background-geolocation.
          ACCESS_BACKGROUND_LOCATION must be declared by the app (SDK 29+). -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Profile picture (Phase 13) — @capacitor/camera. The plugin's own manifest
+         contributes only <queries>, not this permission, so it must be declared
+         here. Gallery picking needs no permission: targetSdk 36 routes it through
+         the system photo picker. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>

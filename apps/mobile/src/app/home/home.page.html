@@ -3,14 +3,17 @@
     <ion-title>
       <span class="brand"><img src="assets/logo/logo-mark.png" alt="" class="brand-mark" /> Exodus Laundry</span>
     </ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="logout()">Sign out</ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h1 class="greeting">{{ greeting() }}</h1>
+  <a class="greeting-row" routerLink="/account">
+    <ion-avatar class="greeting-avatar">
+      <img [src]="avatarSrc()" alt="" />
+    </ion-avatar>
+    <h1 class="greeting">{{ greeting() }}</h1>
+    <span class="greeting-hint">Account</span>
+  </a>
 
   <ion-button expand="block" routerLink="/orders/new">
     <ion-icon name="add-outline" slot="start"></ion-icon>

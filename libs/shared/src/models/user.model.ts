@@ -9,4 +9,6 @@ export interface User {
   phone: string;
   fcmTokens: string[];
   createdAt: Timestamp;
+  /** Cloud Storage download URL for the profile picture. Absent until one is set. */
+  photoUrl?: string;
 }

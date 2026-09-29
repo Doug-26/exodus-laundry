@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getDatabase, type Database } from 'firebase/database';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 /** Firebase web config — shape matches the console's web app config object. */
 export interface FirebaseConfig {
@@ -26,6 +27,7 @@ export interface FirebaseServices {
   firestore: Firestore;
   auth: Auth;
   database: Database;
+  storage: FirebaseStorage;
 }
 
 let services: FirebaseServices | undefined;
@@ -48,6 +50,7 @@ export function initializeFirebase(config: FirebaseConfig): FirebaseServices {
     }),
     auth: getAuth(app),
     database: getDatabase(app),
+    storage: getStorage(app),
   };
   return services;
 }

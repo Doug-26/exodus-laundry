@@ -101,6 +101,19 @@ describe('users', () => {
     await assertFails(updateDoc(doc(dbOf(CUSTOMER), 'users', CUSTOMER), { role: 'admin' }));
     await assertSucceeds(updateDoc(doc(dbOf(CUSTOMER), 'users', CUSTOMER), { name: 'Ana R.' }));
   });
+  it('owner may set photoUrl', async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbOf(CUSTOMER), 'users', CUSTOMER), { photoUrl: 'https://example.test/a.jpg' }),
+    );
+  });
+  it('owner cannot change their phone (would desync the phoneNumbers index)', async () => {
+    await assertFails(
+      updateDoc(doc(dbOf(CUSTOMER), 'users', CUSTOMER), { phone: '+639170009999' }),
+    );
+  });
+  it('owner cannot add arbitrary fields', async () => {
+    await assertFails(updateDoc(doc(dbOf(CUSTOMER), 'users', CUSTOMER), { isAdmin: true }));
+  });
 });
 
 describe('orders — read', () => {

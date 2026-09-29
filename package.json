@@ -11,7 +11,7 @@
     "seed:admin": "node scripts/seed-admin.mjs",
     "seed:rates": "node scripts/seed-rates.mjs",
     "test:shared": "jest --config libs/shared/jest.config.js",
-    "test:rules": "firebase emulators:exec --only firestore --project exodus-rules-test \"jest --config rules-tests/jest.config.js\""
+    "test:rules": "firebase emulators:exec --only firestore,storage --project exodus-rules-test \"jest --config rules-tests/jest.config.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

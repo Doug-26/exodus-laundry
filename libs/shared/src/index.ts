@@ -42,9 +42,10 @@ export {
   lookupCustomerByPhone,
   addFcmToken,
   removeFcmToken,
+  updateUserProfile,
   PhoneTakenError,
 } from './services/users';
-export type { CreateUserProfileInput } from './services/users';
+export type { CreateUserProfileInput, UserProfilePatch } from './services/users';
 export {
   SERVICES,
   serviceLabel,
@@ -80,6 +81,7 @@ export {
 } from './services/tracking';
 export type { DeliveryMeta } from './services/tracking';
 export { computePrice, subscribeRates, getRates, upsertRate } from './services/rates';
+export { uploadAvatar, avatarPath } from './services/storage';
 
 // Config
 export { SHOP_LOCATION } from './config/shop';
