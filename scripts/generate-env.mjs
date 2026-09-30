@@ -69,10 +69,21 @@ const firebase = {
   databaseURL: env.FIREBASE_DATABASE_URL ?? '',
 };
 
-// Optional (mobile maps, Phase 6). Empty until a key is added to .env.
-const googleMapsApiKey = env.GOOGLE_MAPS_API_KEY ?? '';
+// Maps keys. Each app gets the key its restrictions actually permit:
+//
+//   GOOGLE_MAPS_API_KEY      — restricted to the Android package name + SHA-1
+//                              (mobile: @capacitor/google-maps, Routes API).
+//   GOOGLE_MAPS_BROWSER_KEY  — restricted to HTTP referrers (dashboard map, Phase 15).
+//
+// Google Cloud allows only ONE restriction type per key, so an Android-restricted
+// key can never work from a browser and vice versa — hence two keys, not one.
+// Both optional: empty until added to .env, and each app degrades with a message.
+const mapsKeys = {
+  mobile: env.GOOGLE_MAPS_API_KEY ?? '',
+  dashboard: env.GOOGLE_MAPS_BROWSER_KEY ?? '',
+};
 
-function fileContents(production) {
+function fileContents(production, googleMapsApiKey) {
   return (
     '// AUTO-GENERATED from repo-root .env by scripts/generate-env.mjs.\n' +
     '// Do not edit by hand and do not commit — this file is git-ignored.\n' +
@@ -85,15 +96,19 @@ function fileContents(production) {
 }
 
 const targets = [
-  { dir: join(repoRoot, 'apps/mobile/src/environments'), file: 'environment.ts', prod: false },
-  { dir: join(repoRoot, 'apps/mobile/src/environments'), file: 'environment.prod.ts', prod: true },
-  { dir: join(repoRoot, 'apps/dashboard/src/environments'), file: 'environment.ts', prod: false },
+  { dir: join(repoRoot, 'apps/mobile/src/environments'), file: 'environment.ts', prod: false, key: mapsKeys.mobile },
+  { dir: join(repoRoot, 'apps/mobile/src/environments'), file: 'environment.prod.ts', prod: true, key: mapsKeys.mobile },
+  { dir: join(repoRoot, 'apps/dashboard/src/environments'), file: 'environment.ts', prod: false, key: mapsKeys.dashboard },
 ];
 
-for (const { dir, file, prod } of targets) {
+for (const { dir, file, prod, key } of targets) {
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, file), fileContents(prod), 'utf8');
+  writeFileSync(join(dir, file), fileContents(prod, key), 'utf8');
   console.log(`[generate-env] wrote ${join(dir, file)}`);
+}
+
+if (!mapsKeys.dashboard) {
+  console.warn('[generate-env] GOOGLE_MAPS_BROWSER_KEY is unset — the dashboard delivery map will not load.');
 }
 
 console.log('[generate-env] done.');

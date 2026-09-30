@@ -19,6 +19,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/new-order/new-order').then((m) => m.NewOrderComponent),
   },
   {
+    // Declared before 'orders/:id' so the 3-segment route matches first.
+    path: 'orders/:id/delivery',
+    canActivate: [authGuard, staffAdminGuard],
+    loadComponent: () => import('./features/delivery/delivery').then((m) => m.DeliveryComponent),
+  },
+  {
     path: 'orders/:id',
     canActivate: [authGuard, staffAdminGuard],
     loadComponent: () => import('./features/order-detail/order-detail').then((m) => m.OrderDetailComponent),

@@ -13,4 +13,7 @@ export const environment = {
     measurementId: '',
     databaseURL: '',
   },
+  // From GOOGLE_MAPS_BROWSER_KEY — an HTTP-referrer-restricted key, NOT the
+  // Android-restricted GOOGLE_MAPS_API_KEY the mobile app uses.
+  googleMapsApiKey: '',
 };

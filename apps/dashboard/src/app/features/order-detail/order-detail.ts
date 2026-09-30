@@ -69,6 +69,9 @@ import { RatesStore } from '../../rates/rates.store';
               } @else if (needsPickupChoice(o)) {
                 <button type="button" class="btn btn--ghost" (click)="setPickup(o)">Set fulfilment: Pickup</button>
               }
+              @if (o.fulfilment === 'delivery') {
+                <a class="btn btn--ghost" [routerLink]="['/orders', o.id, 'delivery']">Track delivery</a>
+              }
               @if (o.active) {
                 <button type="button" class="btn btn--danger" (click)="cancel(o)">Cancel order</button>
               }

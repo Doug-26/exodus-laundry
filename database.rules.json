@@ -2,7 +2,7 @@
   "rules": {
     "deliveries": {
       "$orderId": {
-        ".read": "auth != null && (auth.uid === data.child('meta/riderId').val() || auth.uid === data.child('meta/customerId').val())",
+        ".read": "auth != null && (auth.uid === data.child('meta/riderId').val() || auth.uid === data.child('meta/customerId').val() || auth.token.role === 'staff' || auth.token.role === 'admin')",
         ".write": "auth != null && ((!data.exists() && newData.child('meta/riderId').val() === auth.uid) || data.child('meta/riderId').val() === auth.uid)"
       }
     }

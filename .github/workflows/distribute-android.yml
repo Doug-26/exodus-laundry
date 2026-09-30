@@ -50,6 +50,7 @@ jobs:
           FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
           FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_MAPS_BROWSER_KEY: ${{ secrets.GOOGLE_MAPS_BROWSER_KEY }}
         run: |
           cat > .env <<EOF
           FIREBASE_API_KEY=$FIREBASE_API_KEY
@@ -61,6 +62,7 @@ jobs:
           FIREBASE_DATABASE_URL=$FIREBASE_DATABASE_URL
           FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
           GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+          GOOGLE_MAPS_BROWSER_KEY=$GOOGLE_MAPS_BROWSER_KEY
           EOF
 
       - name: Restore google-services.json
@@ -129,6 +131,7 @@ jobs:
           FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
           FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_MAPS_BROWSER_KEY: ${{ secrets.GOOGLE_MAPS_BROWSER_KEY }}
         run: |
           cat > .env <<EOF
           FIREBASE_API_KEY=$FIREBASE_API_KEY
@@ -140,6 +143,7 @@ jobs:
           FIREBASE_DATABASE_URL=$FIREBASE_DATABASE_URL
           FIREBASE_MEASUREMENT_ID=$FIREBASE_MEASUREMENT_ID
           GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+          GOOGLE_MAPS_BROWSER_KEY=$GOOGLE_MAPS_BROWSER_KEY
           EOF
 
       - name: Build dashboard

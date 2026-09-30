@@ -3,7 +3,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": []
+    /* @angular/google-maps references the google.maps global namespace (Phase 15).
+       With "types": [] no global type packages are loaded, so it must be named
+       explicitly — same arrangement as apps/mobile/tsconfig.app.json. */
+    "types": ["google.maps"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts"]
