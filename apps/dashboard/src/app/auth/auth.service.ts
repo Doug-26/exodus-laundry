@@ -55,12 +55,26 @@ export class AuthService {
 
   async loginEmail(email: string, password: string): Promise<void> {
     const cred = await signInWithEmail(this.fb.auth, email, password);
+    await this.refreshClaims(cred.user);
     await this.refreshProfile(cred.user.uid);
   }
 
   async loginGoogle(): Promise<void> {
     const cred = await signInWithGoogle(this.fb.auth);
+    await this.refreshClaims(cred.user);
     await this.refreshProfile(cred.user.uid);
+  }
+
+  /**
+   * Force an ID-token refresh so the `role` custom claim is on the token.
+   *
+   * Storage rules gate proof-photo writes on that claim, and a cached token can
+   * be up to an hour stale — long enough for a staff member to sign in and get an
+   * unexplained permission error on upload. Best-effort: a failure here must not
+   * block sign-in, since everything else reads the role from Firestore.
+   */
+  private async refreshClaims(user: FirebaseUser): Promise<void> {
+    await user.getIdToken(true).catch(() => undefined);
   }
 
   /** Load the Firestore profile eagerly so guards see a fresh role right after login. */

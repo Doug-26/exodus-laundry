@@ -111,6 +111,13 @@ export const createTeamMember = onCall(async (request) => {
     throw new HttpsError('internal', 'Could not create the profile.');
   }
 
+  // Set the role claim inline so the new member has it on their very first
+  // sign-in. syncRoleClaim would also set it from the doc write, but that is
+  // asynchronous and Storage/RTDB rules need the claim on the token immediately.
+  await getAuth()
+    .setCustomUserClaims(uid, { role })
+    .catch((err) => logger.error('createTeamMember: claim not set', { uid, err }));
+
   logger.info('createTeamMember: created', { uid, role, by: callerUid });
   return { uid, email: email.trim() };
 });

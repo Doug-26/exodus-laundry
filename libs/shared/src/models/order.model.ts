@@ -86,6 +86,9 @@ export interface Order {
   /** Set when the order reaches 'completed' (Phase 11 revenue reports). Null until then;
    *  absent on orders completed before this field existed. */
   completedAt?: Timestamp | null;
+  /** Cloud Storage download URLs for staff proof-of-service photos (Phase 14).
+   *  Absent until the first photo is added. Staff write, the customer reads. */
+  proofPhotos?: string[];
 }
 
 /** An Order plus its Firestore document id (Order itself is stored without an id). */

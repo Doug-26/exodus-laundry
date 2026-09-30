@@ -6,7 +6,7 @@ import {
   assertSucceeds,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, ref, uploadBytes } from 'firebase/storage';
 
 // Must match the firestore suite: firebase.json sets singleProjectMode.
 const PROJECT_ID = 'exodus-rules-test';
@@ -54,8 +54,56 @@ describe('storage — avatars', () => {
     );
   });
 
-  it('denies paths outside avatars/ (Phase 14 adds its own rules)', async () => {
+  it('denies an unknown top-level path', async () => {
     const storage = testEnv.authenticatedContext(OWNER).storage();
-    await assertFails(uploadBytes(ref(storage, `proof/${OWNER}/photo.jpg`), bytes(), asJpeg));
+    await assertFails(uploadBytes(ref(storage, `scratch/${OWNER}/photo.jpg`), bytes(), asJpeg));
+  });
+});
+
+describe('storage — proof photos (role claim)', () => {
+  const ORDER = 'order123';
+  const path = `proof/${ORDER}/shot1.jpg`;
+
+  // The `role` custom claim is what storage.rules reads — Storage rules cannot
+  // reach Firestore, so the claim is the only role signal in these tests.
+  const staff = () => testEnv.authenticatedContext('staff1', { role: 'staff' }).storage();
+  const admin = () => testEnv.authenticatedContext('admin1', { role: 'admin' }).storage();
+  const customer = () => testEnv.authenticatedContext(OWNER, { role: 'customer' }).storage();
+
+  it('staff uploads a proof photo', async () => {
+    await assertSucceeds(uploadBytes(ref(staff(), path), bytes(), asJpeg));
+  });
+
+  it('admin uploads a proof photo', async () => {
+    await assertSucceeds(uploadBytes(ref(admin(), path), bytes(), asJpeg));
+  });
+
+  it('a customer cannot upload one', async () => {
+    await assertFails(uploadBytes(ref(customer(), path), bytes(), asJpeg));
+  });
+
+  it('a signed-in user with no role claim cannot upload one', async () => {
+    const noClaim = testEnv.authenticatedContext('nobody').storage();
+    await assertFails(uploadBytes(ref(noClaim, path), bytes(), asJpeg));
+  });
+
+  it('anonymous cannot upload one', async () => {
+    await assertFails(uploadBytes(ref(testEnv.unauthenticatedContext().storage(), path), bytes(), asJpeg));
+  });
+
+  it('rejects a non-image content type', async () => {
+    await assertFails(
+      uploadBytes(ref(staff(), path), bytes(), { contentType: 'application/pdf' }),
+    );
+  });
+
+  it('staff can delete a proof photo', async () => {
+    await assertSucceeds(uploadBytes(ref(staff(), path), bytes(), asJpeg));
+    await assertSucceeds(deleteObject(ref(staff(), path)));
+  });
+
+  it('a customer cannot delete one', async () => {
+    await assertSucceeds(uploadBytes(ref(staff(), path), bytes(), asJpeg));
+    await assertFails(deleteObject(ref(customer(), path)));
   });
 });

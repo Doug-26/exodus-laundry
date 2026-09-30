@@ -11,6 +11,14 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Staff/admin, via the `role` custom claim kept in sync by the syncRoleClaim
+    // function. A claim only lands on a client's next ID-token refresh — both apps
+    // force one at login.
+    function isTeam() {
+      return request.auth != null
+        && (request.auth.token.role == 'staff' || request.auth.token.role == 'admin');
+    }
+
     // Customer avatars — one object per user at avatars/{uid}/avatar.jpg,
     // overwritten on every change so no orphans accumulate.
     //
@@ -24,6 +32,23 @@ service firebase.storage {
         && request.resource != null
         && request.resource.size < 2 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+    }
+
+    // Proof-of-service photos — proof/{orderId}/{fileName} (Phase 14).
+    //
+    // Write/delete is staff-only through the role claim; rules here cannot read
+    // Firestore, so the claim is the only role signal available.
+    //
+    // Read is open for the same reason avatars are: the customer has to render
+    // these on their own order detail, and these rules cannot tell whether a given
+    // reader owns that order. The download URL carries an unguessable token.
+    match /proof/{orderId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isTeam()
+        && request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isTeam();
     }
 
     // Deny everything else, including any path a future feature adds before its

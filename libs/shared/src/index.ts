@@ -70,6 +70,8 @@ export {
   subscribeOrder,
   getCompletedOrdersInRange,
   getOrdersInRange,
+  addProofPhoto,
+  removeProofPhoto,
   summarizeRevenue,
 } from './services/orders';
 export type { ServiceOption, CreateOrderInput, StatusTone, RevenueSummary } from './services/orders';
@@ -81,7 +83,7 @@ export {
 } from './services/tracking';
 export type { DeliveryMeta } from './services/tracking';
 export { computePrice, subscribeRates, getRates, upsertRate } from './services/rates';
-export { uploadAvatar, avatarPath } from './services/storage';
+export { uploadAvatar, avatarPath, uploadProofPhoto, deleteProofPhoto } from './services/storage';
 
 // Config
 export { SHOP_LOCATION } from './config/shop';

@@ -4,6 +4,8 @@ import {
   createOrder,
   getCompletedOrdersInRange,
   getOrdersInRange,
+  addProofPhoto as addProofPhotoUrl,
+  removeProofPhoto as removeProofPhotoUrl,
   lookupCustomerByPhone,
   nextStatus,
   setFulfilment,
@@ -18,6 +20,8 @@ import {
   type OrderStatus,
   type OrderWithId,
   type RevenueSummary,
+  uploadProofPhoto,
+  deleteProofPhoto,
 } from '@exodus/shared';
 import { FIREBASE } from '../firebase.providers';
 
@@ -107,5 +111,24 @@ export class OrdersStore {
   /** Every order CREATED within [startMs, endMs], any status (order history). */
   ordersInRange(startMs: number, endMs: number): Promise<OrderWithId[]> {
     return getOrdersInRange(this.fb.firestore, startMs, endMs);
+  }
+
+  /**
+   * Upload a proof photo and attach its URL to the order.
+   * Requires the staff/admin `role` claim on the ID token (storage.rules).
+   */
+  async addProofPhoto(orderId: string, blob: Blob): Promise<void> {
+    const url = await uploadProofPhoto(this.fb.storage, orderId, blob);
+    await addProofPhotoUrl(this.fb.firestore, orderId, url);
+  }
+
+  /**
+   * Detach a proof photo, then delete the object.
+   * Firestore first: if the Storage delete fails the order is still correct and
+   * only an unreferenced object is left behind, rather than a broken image.
+   */
+  async removeProofPhoto(orderId: string, url: string): Promise<void> {
+    await removeProofPhotoUrl(this.fb.firestore, orderId, url);
+    await deleteProofPhoto(this.fb.storage, url).catch(() => undefined);
   }
 }

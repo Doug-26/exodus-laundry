@@ -102,6 +102,52 @@ import { RatesStore } from '../../rates/rates.store';
             }
           </ol>
         </div>
+
+        <h2 class="proof__title">Proof photos</h2>
+        <div class="card proof">
+          <p class="hint">
+            The customer sees these on their order as soon as you add them.
+          </p>
+
+          @if (photoError(); as e) {
+            <p class="banner banner--error" role="alert">{{ e }}</p>
+          }
+
+          <div class="proof__grid">
+            @for (url of o.proofPhotos ?? []; track url) {
+              <figure class="proof__item">
+                <a [href]="url" target="_blank" rel="noopener">
+                  <img [src]="url" alt="Proof photo for order {{ o.claimNumber }}" loading="lazy" />
+                </a>
+                <button
+                  type="button"
+                  class="btn btn--danger"
+                  (click)="removePhoto(o.id, url)"
+                  [disabled]="photoBusy()"
+                >
+                  Remove
+                </button>
+              </figure>
+            } @empty {
+              <p class="empty">No photos yet.</p>
+            }
+          </div>
+
+          <div class="proof__add">
+            <label class="btn btn--ghost" for="proofInput">+ Add photos</label>
+            <input
+              id="proofInput"
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              (change)="onProofFiles(o.id, $event)"
+            />
+            @if (photoBusy()) {
+              <span class="hint" role="status">Uploading…</span>
+            }
+          </div>
+        </div>
       } @else {
         <p role="alert">Order not found.</p>
       }
@@ -126,6 +172,13 @@ import { RatesStore } from '../../rates/rates.store';
     .need-price { color: var(--color-danger); font-size: 0.85rem; margin: 0.25rem 0 0; }
     .history { list-style: decimal inside; color: var(--color-muted); display: flex; flex-direction: column; gap: 0.35rem; align-self: start; margin: 0; }
     .history li { margin: 0; }
+    .proof__title { margin: var(--space-3) 0 0; }
+    .proof { gap: var(--space-3); }
+    .proof__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--space-3); }
+    .proof__item { margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .proof__item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--color-border); display: block; }
+    .proof__add { display: flex; align-items: center; gap: var(--space-3); }
+    .empty { color: var(--color-muted); margin: 0; }
     @media (max-width: 900px) {
       .three-col { grid-template-columns: 1fr; grid-template-rows: none; }
       .three-col > h2:nth-child(1) { order: 1; }
@@ -156,6 +209,8 @@ export class OrderDetailComponent {
   protected readonly editNotes = signal('');
   protected readonly savingDetails = signal(false);
   protected readonly savedDetails = signal(false);
+  protected readonly photoBusy = signal(false);
+  protected readonly photoError = signal<string | null>(null);
   private editInit = false;
 
   /** True once the price is set (existing or hand-typed) — stops auto-fill overwriting it. */
@@ -256,6 +311,63 @@ export class OrderDetailComponent {
   protected async cancel(o: OrderWithId): Promise<void> {
     if (window.confirm(`Cancel order ${o.claimNumber}?`)) {
       await this.store.cancel(o.id);
+    }
+  }
+
+  /** Downscale + re-encode before upload: phone photos routinely exceed the 5MB rule cap. */
+  private async downscale(file: File, max = 1280): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas unavailable');
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Could not encode the image'))),
+        'image/jpeg',
+        0.8,
+      ),
+    );
+  }
+
+  protected async onProofFiles(orderId: string, event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = ''; // let the same file be re-picked after a failure
+    if (files.length === 0) {
+      return;
+    }
+    this.photoError.set(null);
+    this.photoBusy.set(true);
+    try {
+      for (const file of files) {
+        await this.store.addProofPhoto(orderId, await this.downscale(file));
+      }
+    } catch {
+      // Most likely cause: the role claim is missing from this session's token.
+      this.photoError.set(
+        'Could not upload. If you were just given staff access, sign out and back in, then retry.',
+      );
+    } finally {
+      this.photoBusy.set(false);
+    }
+  }
+
+  protected async removePhoto(orderId: string, url: string): Promise<void> {
+    this.photoError.set(null);
+    this.photoBusy.set(true);
+    try {
+      await this.store.removeProofPhoto(orderId, url);
+    } catch {
+      this.photoError.set('Could not remove that photo. Please try again.');
+    } finally {
+      this.photoBusy.set(false);
     }
   }
 }

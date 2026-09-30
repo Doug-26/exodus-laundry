@@ -42,7 +42,14 @@ generated `environment.ts`.
 **Cloud Functions (deployed):** `onOrderReady` (push on →ready), `onOrderCompleted` (push
 on →completed, worded "Delivered!" vs "Order complete" by `fulfilment`), `startDelivery`
 (rider self-claim + Routes API), `linkGuestOrders` (retro-link guest orders on signup),
-`createTeamMember` (admin-gated staff/rider provisioning).
+`createTeamMember` (admin-gated staff/rider provisioning), `syncRoleClaim` (mirrors
+`users/{uid}.role` onto the Auth token), `backfillRoleClaims` (one-off, admin-gated).
+
+> **Function regions:** Firestore triggers now default to the **database's** region
+> (`asia-southeast1`), so `onOrderCompleted` and `syncRoleClaim` live there.
+> `onOrderReady` predates that and still runs in `us-central1`, cross-region from its
+> own trigger — the CLI warns about it on every deploy. Moving it means delete +
+> recreate (regions aren't editable in place), so it's been left alone.
 
 ---
 
@@ -53,6 +60,9 @@ on →completed, worded "Delivered!" vs "Order complete" by `fulfilment`), `star
 **Realtime DB:** `deliveries/{orderId}` = `{ meta: {riderId, customerId}, riderLocation: {lat,lng,heading,timestamp} }`.
 **Cloud Storage:** `avatars/{uid}/avatar.jpg` — one fixed object per customer, overwritten
 on change (no orphans, trivial rules). `User.photoUrl` holds its download URL.
+`proof/{orderId}/{uuid}.jpg` — staff proof-of-service photos; `Order.proofPhotos` holds
+their download URLs. Deletion works from the URL alone (`ref(storage, url)` accepts a
+download URL), so there's no parallel list of storage paths to keep in sync.
 
 **Order state machine** (`libs/shared/src/services/orders.ts` `nextStatus`):
 ```
@@ -95,6 +105,7 @@ Exodus wash&fold = 5kg / ₱180 base / ₱40 per kg above.
 | **11 Revenue Reports** | `Order.completedAt`; `getCompletedOrdersInRange` + `summarizeRevenue`; admin `/reports` (Today/7d/month/custom, by service) |
 | **12 Quick Wins** | Mobile name greeting + client-side date filter on the order list (All/Today/7d/Month/custom, no extra reads); `onOrderCompleted` push; dashboard **Order History** `/history` (all orders in a created-date range, any status — `staffAdminGuard`, so staff see it too) |
 | **13 Storage + Avatar** | Cloud Storage enabled + `storage.rules` (owner writes own avatar); `storage` on shared `FirebaseServices`; `uploadAvatar`; `User.photoUrl`; `@capacitor/camera`; mobile **Account** screen (avatar, name, read-only phone, sign out); avatar in the home greeting. Also clamped the `users/{uid}` update rule — see §6 |
+| **14 Proof Photos** | **Role custom claims** — `syncRoleClaim` mirrors `users/{uid}.role` onto the Auth token (Storage/RTDB rules can't read Firestore), `createTeamMember` sets it inline, `backfillRoleClaims` + `npm run backfill:claims` migrated the 8 existing accounts; `storage.rules` proof paths gated on the claim; `Order.proofPhotos`; dashboard order-detail gallery (multi-add, per-photo remove, client-side downscale to 1280px); read-only gallery on mobile order-detail |
 | **CI/CD** | GitHub Actions: signed release APK → Firebase App Distribution + dashboard hosting deploy on push to `main` |
 
 Detailed per-phase notes were kept in Claude memory (account-local); this file + git
@@ -148,8 +159,12 @@ Distribution (group `internal`), and deploys the dashboard to Hosting. Auth via 
   which permanently desyncs the **immutable** `phoneNumbers/{phone}` index that guest-order
   linking matches on. Phone corrections must go through staff/Admin SDK.
 - **Storage rules cannot read Firestore**, so `roleIs()`/`isStaff()` are *not* portable to
-  `storage.rules` — it gates by path ownership only (`request.auth.uid == uid`), plus a 2MB
-  and `image/*` cap. Role-gated Storage needs the **custom claims** in Phase 14.
+  `storage.rules`. Avatars gate by path ownership (`request.auth.uid == uid`); proof photos
+  gate on the **`role` custom claim** (`request.auth.token.role`), kept in sync by
+  `syncRoleClaim`. RTDB rules can read the same claim — that's what unlocks Phase 15.
+- **A claim only reaches a client on its next ID-token refresh** (up to an hour otherwise).
+  The dashboard forces `getIdToken(true)` at login; anyone whose role changes mid-session
+  must sign out and back in or they'll hit unexplained permission errors.
 
 ---
 
@@ -165,7 +180,10 @@ Distribution (group `internal`), and deploys the dashboard to Hosting. Auth via 
   `packages: tools platform-tools`, but the obsolete `tools` package no longer exists in
   cmdline-tools 16.x — the workflow pins `packages: 'platform-tools'`. It also sets
   `log-accepted-android-sdk-licenses: false`, otherwise ~40KB of licence text buries real errors.
-- **Functions deploy on Windows** may need `FUNCTIONS_DISCOVERY_TIMEOUT=120`.
+- **Functions deploy on Windows** needs `FUNCTIONS_DISCOVERY_TIMEOUT`; **120 is no longer
+  enough** at 7 functions — use `300`. A too-short timeout can end the deploy during source
+  discovery *without* an error, so always confirm with `firebase functions:list` rather than
+  trusting the exit code.
 - **Android device** for testing (`adb`), id `AE6RUT4816000657` — the USB link **drops
   intermittently**; use `adb reconnect` / `adb reconnect offline`, then `adb install -r`.
   (App Distribution now makes OTA installs possible instead of USB.)
@@ -202,6 +220,9 @@ npm run test:rules         # Firestore + Storage rules emulators (needs Java + f
 npm run seed:admin -- <email> <password> "<Full Name>" <phone>
 npm run seed:rates -- <adminEmail> <adminPassword>
 
+# one-off: give existing accounts their `role` custom claim (Phase 14)
+npm run backfill:claims -- <adminEmail> <adminPassword>
+
 # dashboard (web)
 cd apps/dashboard && npm run build            # or: npx ng serve / ng lint
 
@@ -228,17 +249,8 @@ Payments (PayMongo) is **parked** as the last phase. Before it, the user request
 additions, sequenced so each foundation lands just before it's needed. **Decisions already
 made are noted.**
 
-> Phases 12 and 13 are **done** — see §4. Phase 13 laid the Storage foundation Phase 14
-> builds on, so the remaining phases stay in this order.
-
-### Phase 14 — Proof photos
-- **Foundation: role custom claims** — set a `role` claim (in `createTeamMember`, on login
-  refresh, + a one-time backfill script) so Storage **and** RTDB rules can gate by role
-  (RTDB/Storage rules can read `auth.token.role`, not Firestore).
-- **Storage rules:** staff write proof photos; customer reads via the stored URL.
-- **Dashboard order-detail:** add/capture **multiple** proof photos (gallery). *(Decision:
-  multiple, anytime.)*
-- **Mobile order-detail:** show proof photos **as soon as uploaded**. *(Decision.)*
+> Phases 12, 13 and 14 are **done** — see §4. Phase 14 shipped the **role custom claims**
+> that Phase 15's RTDB rules need, so that foundation already exists.
 
 ### Phase 15 — Dashboard delivery view + live monitoring
 - **Foundation:** **Google Maps JS API** in the dashboard (its first map — mobile uses the

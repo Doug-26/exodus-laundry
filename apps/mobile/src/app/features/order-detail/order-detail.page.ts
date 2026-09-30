@@ -94,6 +94,15 @@ import { OrdersStore } from '../../orders/orders.store';
           </ion-list>
         </ion-card>
 
+        @if (o.proofPhotos?.length) {
+          <h2 class="section-title">Photos from the shop</h2>
+          <div class="proof-grid">
+            @for (url of o.proofPhotos ?? []; track url) {
+              <img [src]="url" alt="Photo of your order from the shop" loading="lazy" />
+            }
+          </div>
+        }
+
         @if (o.status === 'ready' && o.fulfilment === null) {
           <h2 class="section-title">How would you like to get it back?</h2>
           <div class="choice">
@@ -155,6 +164,20 @@ import { OrdersStore } from '../../orders/orders.store';
   `,
   styles: [
     `
+      /* Proof photos from the shop — read-only here; staff add them on the dashboard. */
+      .proof-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+        gap: var(--app-space-2);
+        margin-bottom: var(--app-space-4);
+      }
+      .proof-grid img {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: var(--app-radius-md);
+        display: block;
+      }
       .order-head {
         display: flex;
         align-items: center;

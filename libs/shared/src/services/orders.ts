@@ -2,6 +2,7 @@ import {
   type Firestore,
   type FieldValue,
   type Unsubscribe,
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -455,4 +456,34 @@ export async function getOrdersInRange(
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Order) }));
+}
+
+// ── Proof photos (Phase 14) ──────────────────────────────────────────────────
+
+/**
+ * Attach a proof-photo URL to an order (staff only — see firestore.rules, where
+ * staff may update any order field). arrayUnion keeps it idempotent if a retry
+ * lands twice.
+ */
+export async function addProofPhoto(
+  firestore: Firestore,
+  orderId: string,
+  url: string,
+): Promise<void> {
+  await updateDoc(doc(firestore, 'orders', orderId), {
+    proofPhotos: arrayUnion(url),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Detach a proof-photo URL. Delete the Storage object separately. */
+export async function removeProofPhoto(
+  firestore: Firestore,
+  orderId: string,
+  url: string,
+): Promise<void> {
+  await updateDoc(doc(firestore, 'orders', orderId), {
+    proofPhotos: arrayRemove(url),
+    updatedAt: serverTimestamp(),
+  });
 }
