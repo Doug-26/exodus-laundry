@@ -17,6 +17,10 @@ interface LoginModel {
       <img src="logo-full.png" alt="" class="login__logo" />
       <h1>Exodus Laundry — Staff</h1>
 
+      <p class="download-link">
+        Want to try the mobile app? <a href="/download.html">Download the Android app</a>.
+      </p>
+
       @if (denied()) {
         <p class="banner banner--error" role="alert">
           This account can’t access the dashboard. Contact your administrator.
@@ -77,6 +81,8 @@ interface LoginModel {
     .login { max-width: 24rem; margin: 4rem auto; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4); }
     .login__logo { display: block; width: min(260px, 80%); height: auto; margin: 0 auto; }
     .login h1 { text-align: center; color: var(--color-primary); }
+    .download-link { margin: 0; text-align: center; color: var(--color-text-secondary); }
+    .download-link a { color: var(--color-primary); font-weight: 600; }
     form { display: flex; flex-direction: column; gap: var(--space-2); }
     .link { background: none; border: none; color: var(--color-primary); text-decoration: underline; align-self: center; padding: 0; cursor: pointer; }
     .btn--google { gap: 0.6rem; }

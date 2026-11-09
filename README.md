@@ -62,3 +62,12 @@ npm run test:shared                    # phone util + shared library (Jest)
 | Dashboard | Angular 22 (zoneless) |
 | Backend | Firebase: Auth, Firestore, Realtime Database, Cloud Functions, FCM, Hosting |
 | Region | `asia-southeast1` (Singapore) — closest to Naga City |
+
+## Public Android download
+
+Visitors can install the Android app from the public Firebase Hosting page:
+[`https://exodus-laundry.web.app/download.html`](https://exodus-laundry.web.app/download.html).
+The GitHub Actions workflow builds a signed APK and publishes it at
+`/downloads/exodus-laundry.apk` with the dashboard. Firebase App Distribution remains
+available as a separate tester channel and is skipped when its credentials are absent.
+See [docs/public-android-download.md](docs/public-android-download.md) for setup and release details.

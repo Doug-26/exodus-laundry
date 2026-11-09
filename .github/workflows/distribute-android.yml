@@ -1,16 +1,19 @@
-name: Distribute Android + Deploy Dashboard
+name: Build Android + Deploy Dashboard
 
-# Builds a signed release APK on every push to main and uploads it to Firebase
-# App Distribution, then deploys the dashboard to Firebase Hosting.
-# Auth uses a service account (not the deprecated FIREBASE_TOKEN).
+# Builds a signed release APK on every push to main, publishes it as a public
+# Firebase Hosting download, optionally sends it to Firebase App Distribution
+# for testers, then deploys the dashboard. Firebase auth uses a service account.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  android:
-    name: Build + distribute Android APK
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,17 +100,54 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease
 
+      - name: Prepare public APK
+        run: cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/exodus-laundry.apk"
+
+      - name: Upload APK for Hosting deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-android-apk
+          path: ${{ runner.temp }}/exodus-laundry.apk
+          if-no-files-found: error
+
+  distribute-test:
+    name: Distribute Android APK to testers
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Firebase tester configuration
+        id: config
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_ANDROID_APP_ID" ] && [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Firebase App Distribution is not configured; skipping tester upload."
+          fi
+
+      - name: Download APK
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: public-android-apk
+          path: apk
+
       - name: Upload to Firebase App Distribution
+        if: steps.config.outputs.enabled == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          groups: internal
-          file: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          groups: ${{ secrets.APP_DISTRIBUTION_GROUPS }}
+          file: apk/exodus-laundry.apk
           releaseNotes: ${{ github.event.head_commit.message || 'Manual release' }}
 
   dashboard:
     name: Deploy dashboard hosting
+    needs: build-android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -145,6 +185,12 @@ jobs:
           GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
           GOOGLE_MAPS_BROWSER_KEY=$GOOGLE_MAPS_BROWSER_KEY
           EOF
+
+      - name: Download public APK
+        uses: actions/download-artifact@v4
+        with:
+          name: public-android-apk
+          path: apps/dashboard/public/downloads
 
       - name: Build dashboard
         run: npm run build --workspace @exodus/dashboard
